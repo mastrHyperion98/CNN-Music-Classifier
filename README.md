@@ -1,5 +1,6 @@
 # MachineLearningProject
-Neural Network Music genre classifier
+
+Supervised machine learning program that will efficiently classify new unseen music tracks by genre. The project will train a Neural Network model on a database of 10,000 categorized music files. It will take the music files as input and extract relevant features such that we can accurately predict the genre of new tracks that are inputted into the syste
 
 ## Installation
 
