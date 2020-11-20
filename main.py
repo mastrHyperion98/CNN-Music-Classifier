@@ -1,16 +1,15 @@
-# This is a sample Python script.
+from tools import FeatureExtractor
+import librosa
 
-# Press Shift+F10 to execute it or replace it with your code.
-# Press Double Shift to search everywhere for classes, files, tool windows, actions, and settings.
+def main():
+    audio_path = 'samples/track_1.wav'
+    x, sr = librosa.load(audio_path)
+    FeatureExtractor.VisualizeWaveForm(x, sr)
+    FeatureExtractor.VisualizeSpectrogram(x, sr)
+    row = FeatureExtractor.Extract(x, sr)
+    print(row)
 
-
-def print_hi(name):
-    # Use a breakpoint in the code line below to debug your script.
-    print(f'Hi, {name}')  # Press Ctrl+8 to toggle the breakpoint.
-
-
-# Press the green button in the gutter to run the script.
 if __name__ == '__main__':
-    print_hi('PyCharm')
+    main()
 
-# See PyCharm help at https://www.jetbrains.com/help/pycharm/
+
