@@ -21,17 +21,21 @@ def VisualizeSpectrogram(x, sr):
     plt.show()
 
 
-def Extract(x, sr):
+def Extract(x,sr):
     zero_crossings = np.mean(librosa.zero_crossings(x, pad=False))
     chroma_stft = np.mean(librosa.feature.chroma_stft(x, sr=sr))
     spec_cent = np.mean(librosa.feature.spectral_centroid(x, sr=sr))
     spec_bw = np.mean(librosa.feature.spectral_bandwidth(x, sr=sr))
     rolloff = np.mean(librosa.feature.spectral_rolloff(x, sr=sr))
-    mfcc = np.mean(librosa.feature.mfcc(x, sr=sr))
+    mfcc = librosa.feature.mfcc(x, sr=sr)
+    features = [zero_crossings, chroma_stft, spec_cent, spec_bw, rolloff]
 
-    return np.array([zero_crossings,chroma_stft, spec_cent, spec_bw, rolloff, mfcc])
+    for entry in mfcc:
+        features.append(np.mean(entry))
 
+    return np.array(features)
 
-def PreprocessData(X):
-   scaler = preprocessing.StandardScaler().fit(X)
-   return scaler.transform(X)
+# accepts a dataframe and applies column wise scaling
+def PreprocessData(data):
+   scaler = preprocessing.StandardScaler()
+   return scaler.fit_transform(np.array(data.iloc[:, :-1], dtype=float))
