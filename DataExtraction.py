@@ -11,6 +11,17 @@ def main():
 
 
 def FetchData():
+    header = 'filename zero_crossing_rate chroma_stft spectral_centroid spectral_bandwidth rolloff'
+    for i in range(1, 21):
+        header += f' mfcc{i}'
+    header += ' label'
+    header = header.split()
+
+    file = open('data.csv', 'w', newline='')
+    with file:
+        writer = csv.writer(file)
+        writer.writerow(header)
+
     dataset_dir = 'dataset'
     genres = os.listdir(path=dataset_dir)
     for genre in genres:
@@ -18,7 +29,7 @@ def FetchData():
         filenames = os.listdir(genre_dir)
         for filename in filenames:
             audio_path = genre_dir+'/'+filename
-            x, sr = librosa.load(audio_path)
+            x, sr = librosa.load(audio_path, mono=True, duration=30)
             features = FeatureExtractor.Extract(filename, x, sr, genre)
             to_append = ''
             for feature in features:
