@@ -45,3 +45,5 @@ pip-log.txt
 pip-delete-this-directory.txt
 
 .idea
+dataset/
+samples/

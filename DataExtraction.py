@@ -7,11 +7,12 @@ import librosa
 import numpy as np
 from tools import FeatureExtractor
 def main():
-    FetchData()
+    FetchDataFeatures()
+    print('Extraction Completed')
 
 
-def FetchData():
-    header = 'filename zero_crossing_rate chroma_stft spectral_centroid spectral_bandwidth rolloff'
+def FetchDataFeatures():
+    header = 'zero_crossing_rate chroma_stft spectral_centroid spectral_bandwidth rolloff'
     for i in range(1, 21):
         header += f' mfcc{i}'
     header += ' label'
@@ -30,7 +31,7 @@ def FetchData():
         for filename in filenames:
             audio_path = genre_dir+'/'+filename
             x, sr = librosa.load(audio_path, mono=True, duration=30)
-            features = FeatureExtractor.Extract(filename, x, sr, genre)
+            features = FeatureExtractor.Extract(x, sr, genre)
             to_append = ''
             for feature in features:
                 to_append += f' {feature}'
@@ -39,6 +40,7 @@ def FetchData():
             with file:
                 writer = csv.writer(file)
                 writer.writerow(to_append.split())
+        print(f'{genre} has been completed')
 
 
 if __name__ == '__main__':
