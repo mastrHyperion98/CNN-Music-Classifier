@@ -29,13 +29,6 @@ def LoadData(filename):
     return X, y
 
 
-def hwc_to_nchw(x):
-    """Convert x from (H,W[,C]) to (N,C,H,W) format where N=1."""
-    if x.ndim < 3:
-        x = x.unsqueeze(2)
-    return x.permute(2, 0, 1).unsqueeze(0)
-
-
 def plot_channels(x, **kwargs):
     """Plot each channel in z as an image, where z is in (C,H,W) format."""
     vmax = max(-x.min(), x.max())  # Range of values
@@ -58,19 +51,23 @@ def main():
     # converting training images into torch format
 
     # For the dataGraph there is a single channel'
-    img = train_x[0]
+    img = train_x
     print(img.shape)
-    img = img.reshape(128,431)
+    img = img.reshape(72, 128, 431)
     print(img.shape)
-    FeatureExtractor.VisualizeSpectrogram(img, sr)
-    img = hwc_to_nchw(torch.from_numpy(img).float())
+    tensor = torch.from_numpy(img).float()
+    tensor = tensor[:, None, None, :, :]
+    print(tensor)
 
-    print(img)
-    torch.manual_seed(0);  # Ensure PyTorch uses same random initial weights
-    conv = torch.nn.Conv2d(in_channels=1, out_channels=36, kernel_size=2, stride=1, padding=0)
-    a = conv(img)
+    for i in range(3):
+        dimg = tensor[i]
+        torch.manual_seed(0);  # Ensure PyTorch uses same random initial weights
+        conv = torch.nn.Conv2d(in_channels=1, out_channels=2, kernel_size=2, stride=1, padding=0)
+        a = conv(dimg)
 
-    plot_channels(a[0])
+        plot_channels(a[0])
+
+
 
 if __name__ == '__main__':
     main()
