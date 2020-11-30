@@ -9,18 +9,8 @@ from tools import FeatureExtractor
 import matplotlib.pyplot as plt
 
 def main():
-    #FetchGraphData()
-    #rint('Extraction Completed')
-
-    # Hiphop, Jazz and Rock completed
-    x, sr = librosa.load('samples/track_1.wav', mono=True, duration=10, offset=15)
-    mels_spectrogram = librosa.feature.melspectrogram(x, sr, n_mels=128)
-    Xdb = librosa.power_to_db(mels_spectrogram, ref=np.max)
-    librosa.display.specshow(Xdb, sr=sr, x_axis='time', y_axis='hz')
-    plt.colorbar()
-    plt.title("Spectrogram")
-    plt.show()
-    print(Xdb.shape)
+    FetchDataFeatures()
+    print('Extraction Completed')
 
 
 def FetchDataFeatures():
