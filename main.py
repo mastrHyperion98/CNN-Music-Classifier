@@ -10,9 +10,11 @@ from sklearn.model_selection import train_test_split
 from torch.autograd import Variable
 from tools import FeatureExtractor
 from sklearn.ensemble import RandomForestClassifier
+from sklearn.metrics import plot_confusion_matrix
 import numpy as np
 import pandas as pd
 import matplotlib.pyplot as plt
+
 
 def LoadData(filename):
     # Read our extracted data into a pandas dataframe
@@ -40,14 +42,90 @@ def plot_channels(x, **kwargs):
         plt.show()
 
 
-def main():
-    sr = 22050
-    X, y = LoadData('dataGraph.csv')
-    #Split into training and testing data
+def ExperimentOne():
+    #Experiment One and two uses our extrapolated features to try and create a fast and efficient trainer.
+    #Here we will be using a RandomForestClassifier of max_depth 20 and 200 estimators to estimate our resuts.
+    print("#########\tExperiment One: RandomForest Classifier\t#########")
+    max_depth = 26
+    n_estimators = 100
+    # load our data
+    X, y, genres = LoadData('data.csv')
     train_x, val_x, train_y, val_y=  train_test_split(X,y, test_size=0.1)
-    #clf = RandomForestClassifier(max_depth=10, random_state=0)
-    #clf.fit(train_x, train_y)
-    #print(clf.score(val_x, val_y))
+    clf = RandomForestClassifier(max_depth=max_depth, bootstrap=True, n_estimators=n_estimators, random_state=0)
+    clf.fit(train_x, train_y)
+    print("Shape of training data: " + str(train_x.shape))
+    print("Training Accuracy: " + str(clf.score(train_x, train_y)*100))
+    print("Testing Accuracy: " + str(clf.score(val_x, val_y)*100))
+
+    # Plot non-normalized confusion matrix
+    titles_options = [("Confusion matrix, without normalization", None),
+                      ("Normalized confusion matrix", 'true')]
+    for title, normalize in titles_options:
+        disp = plot_confusion_matrix(clf, val_x, val_y,
+                                     cmap=plt.cm.Blues,
+                                     normalize=normalize)
+        disp.ax_.set_title(title)
+
+        print(title)
+        print(disp.confusion_matrix)
+
+    plt.show()
+
+
+def ExperimentTwo():
+    #Experiment two is very similar to Experiment One but using a Neural Network instead
+    print("#########\tExperiment Two: Neural Network Classifier\t#########")
+    # Your code here. Aim for 2-4 lines.
+    X, y = LoadData('data.csv')
+    train_x, val_x, train_y, val_y = train_test_split(X, y, test_size=0.1)
+    X_train_torch = torch.from_numpy(train_x).float()
+    y_train_torch = torch.from_numpy(train_y).long()
+    X_test_torch = torch.from_numpy(val_x).float()
+    y_test_torch = torch.from_numpy(val_y).long()
+
+    torch.manual_seed(0) # Ensure model weights initialized with same random numbers
+
+    # Create an object that holds a sequence of layers and activation functions
+    model = torch.nn.Sequential(
+        torch.nn.Linear(26, 8),   # Applies Wx+b from 784 dimensions down to 10
+        torch.nn.ReLU(),
+        torch.nn.Softmax()
+    )
+
+    # Create an object that can compute "negative log likelihood of a softmax"
+    loss = torch.nn.CrossEntropyLoss()
+    optimizer = torch.optim.SGD(model.parameters(), lr=0.01, momentum=0.9)
+    # Make 10 passes over the training data, each time using batch_size samples to compute gradient
+    num_epoch = 300
+    for epoch in range(num_epoch):
+        y_pred = model(X_train_torch)  # Make predictions (final-layer activations)
+        l = loss(y_pred, y_train_torch)  # Compute loss with respect to predictions
+        model.zero_grad()  # Reset all gradient accumulators to zero (PyTorch thing)
+        l.backward()  # Compute gradient of loss wrt all parameters (backprop!)
+        optimizer.step()  # Use the gradients to take a step with SGD.
+
+        print("Epoch %d final minibatch had loss %.4f" % (epoch + 1, l.item()))
+
+    # Need to create a function to compute accuracy/score
+    predict = model(X_test_torch)
+    print(predict[0])
+    #model.eval()
+    value, indices = predict[0].max(0)
+    print("Y_test_torch: " + str(y_test_torch[0]))
+    y_value, y_indices = y_test_torch[0].max(0)
+    print(indices)
+    print("Match: " + str(y_indices == indices))
+
+
+def ExperimentThree():
+    #Using CNN and spectrogram images directly for classification
+    sr = 22050
+    X, y, genres = LoadData('dataGraph.csv')
+    # Split into training and testing data
+    train_x, val_x, train_y, val_y = train_test_split(X, y, test_size=0.1)
+    # clf = RandomForestClassifier(max_depth=10, random_state=0)
+    # clf.fit(train_x, train_y)
+    # print(clf.score(val_x, val_y))
     # converting training images into torch format
 
     # For the dataGraph there is a single channel'
@@ -66,6 +144,10 @@ def main():
         a = conv(dimg)
 
         plot_channels(a[0])
+
+
+def main():
+   ExperimentTwo()
 
 
 
