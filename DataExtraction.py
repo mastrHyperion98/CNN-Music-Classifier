@@ -7,12 +7,14 @@ import librosa
 import numpy as np
 from tools import FeatureExtractor
 def main():
-    FetchDataFeatures()
+    FetchGraphData()
     print('Extraction Completed')
+
+    # Hiphop, Jazz and Rock completed
 
 
 def FetchDataFeatures():
-    header = 'zero_crossing_rate chroma_stft spectral_centroid spectral_bandwidth rolloff'
+    header = 'zero_crossing_rate chroma_stft spectral_centroid spectral_bandwidth rolloff tempo'
     for i in range(1, 21):
         header += f' mfcc{i}'
     header += ' label'
@@ -37,6 +39,42 @@ def FetchDataFeatures():
                 to_append += f' {feature}'
 
             file = open('data.csv', 'a', newline='')
+            with file:
+                writer = csv.writer(file)
+                writer.writerow(to_append.split())
+        print(f'{genre} has been completed')
+
+
+def FetchGraphData():
+    numRows=1025
+    numCols=1292
+    header = ''
+    for i in range(1, numRows*numCols):
+        header += f' db{i}'
+    header += ' label'
+    header = header.split()
+
+    file = open('dataGraph.csv', 'w', newline='')
+    with file:
+        writer = csv.writer(file)
+        writer.writerow(header)
+
+    dataset_dir = 'dataset'
+    genres = os.listdir(path=dataset_dir)
+    for genre in genres:
+        genre_dir = dataset_dir+"/"+genre
+        filenames = os.listdir(genre_dir)
+        for filename in filenames:
+            audio_path = genre_dir+'/'+filename
+            x, sr = librosa.load(audio_path, mono=True, duration=30)
+            X = librosa.stft(x)
+            Xdb = librosa.amplitude_to_db(abs(X))
+            features = np.reshape(Xdb,(numCols*numRows,))
+            to_append = ''
+            for feature in features:
+                to_append += f' {feature}'
+
+            file = open('dataGraph.csv', 'a', newline='')
             with file:
                 writer = csv.writer(file)
                 writer.writerow(to_append.split())
