@@ -6,11 +6,21 @@ import os
 import librosa
 import numpy as np
 from tools import FeatureExtractor
+import matplotlib.pyplot as plt
+
 def main():
-    FetchGraphData()
-    print('Extraction Completed')
+    #FetchGraphData()
+    #rint('Extraction Completed')
 
     # Hiphop, Jazz and Rock completed
+    x, sr = librosa.load('samples/track_1.wav', mono=True, duration=10, offset=15)
+    mels_spectrogram = librosa.feature.melspectrogram(x, sr, n_mels=128)
+    Xdb = librosa.power_to_db(mels_spectrogram, ref=np.max)
+    librosa.display.specshow(Xdb, sr=sr, x_axis='time', y_axis='hz')
+    plt.colorbar()
+    plt.title("Spectrogram")
+    plt.show()
+    print(Xdb.shape)
 
 
 def FetchDataFeatures():
@@ -46,10 +56,10 @@ def FetchDataFeatures():
 
 
 def FetchGraphData():
-    numRows=1025
-    numCols=1292
+    numRows=128
+    numCols=431
     header = ''
-    for i in range(1, numRows*numCols):
+    for i in range(1, numRows*numCols+1):
         header += f' db{i}'
     header += ' label'
     header = header.split()
@@ -64,11 +74,12 @@ def FetchGraphData():
     for genre in genres:
         genre_dir = dataset_dir+"/"+genre
         filenames = os.listdir(genre_dir)
+        filecount = 20
         for filename in filenames:
             audio_path = genre_dir+'/'+filename
-            x, sr = librosa.load(audio_path, mono=True, duration=30)
-            X = librosa.stft(x)
-            Xdb = librosa.amplitude_to_db(abs(X))
+            x, sr = librosa.load(audio_path, mono=True, duration=10, offset=15)
+            mels_spectrogram = librosa.feature.melspectrogram(x, sr, n_mels=128)
+            Xdb = librosa.power_to_db(mels_spectrogram, ref=np.max)
             features = np.reshape(Xdb,(numCols*numRows,))
             to_append = ''
             for feature in features:
@@ -78,6 +89,9 @@ def FetchGraphData():
             with file:
                 writer = csv.writer(file)
                 writer.writerow(to_append.split())
+            filecount = filecount - 1
+            if filecount == 0:
+                break
         print(f'{genre} has been completed')
 
 
