@@ -74,7 +74,6 @@ def FetchGraphData():
     for genre in genres:
         genre_dir = dataset_dir+"/"+genre
         filenames = os.listdir(genre_dir)
-        filecount = 20
         for filename in filenames:
             audio_path = genre_dir+'/'+filename
             x, sr = librosa.load(audio_path, mono=True, duration=10, offset=15)
@@ -89,9 +88,6 @@ def FetchGraphData():
             with file:
                 writer = csv.writer(file)
                 writer.writerow(to_append.split())
-            filecount = filecount - 1
-            if filecount == 0:
-                break
         print(f'{genre} has been completed')
 
 
