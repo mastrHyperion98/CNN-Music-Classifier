@@ -5,6 +5,7 @@ import torch
 from torch.autograd import Variable
 from torch.nn import Linear, ReLU, CrossEntropyLoss, Sequential, Conv2d, MaxPool2d, Module, Softmax, BatchNorm2d, Dropout
 from torch.optim import Adam, SGD
+from pytorch_lightning.metrics import Accuracy
 from sklearn.preprocessing import LabelEncoder
 from sklearn.model_selection import train_test_split
 from torch.autograd import Variable
@@ -77,7 +78,7 @@ def ExperimentTwo():
     print("#########\tExperiment Two: Neural Network Classifier\t#########")
     # Your code here. Aim for 2-4 lines.
     X, y = LoadData('data.csv')
-    train_x, val_x, train_y, val_y = train_test_split(X, y, test_size=0.1)
+    train_x, val_x, train_y, val_y = train_test_split(X, y, test_size=0.1, shuffle=True)
     X_train_torch = torch.from_numpy(train_x).float()
     y_train_torch = torch.from_numpy(train_y).long()
     X_test_torch = torch.from_numpy(val_x).float()
@@ -87,35 +88,55 @@ def ExperimentTwo():
 
     # Create an object that holds a sequence of layers and activation functions
     model = torch.nn.Sequential(
-        torch.nn.Linear(26, 8),   # Applies Wx+b from 784 dimensions down to 10
+        torch.nn.Linear(26, 20),   # Applies Wx+b from 784 dimensions down to 10
         torch.nn.ReLU(),
-        torch.nn.Softmax()
+        torch.nn.Linear(20, 14),  # Applies Wx+b from 784 dimensions down to 10
+        torch.nn.ReLU(),
+        torch.nn.Linear(14, 8),  # Applies Wx+b from 784 dimensions down to 10
     )
 
     # Create an object that can compute "negative log likelihood of a softmax"
     loss = torch.nn.CrossEntropyLoss()
     optimizer = torch.optim.SGD(model.parameters(), lr=0.01, momentum=0.9)
     # Make 10 passes over the training data, each time using batch_size samples to compute gradient
-    num_epoch = 300
+    num_epoch = 1000
+    batch_size = 200
+    model.train()
     for epoch in range(num_epoch):
-        y_pred = model(X_train_torch)  # Make predictions (final-layer activations)
-        l = loss(y_pred, y_train_torch)  # Compute loss with respect to predictions
-        model.zero_grad()  # Reset all gradient accumulators to zero (PyTorch thing)
-        l.backward()  # Compute gradient of loss wrt all parameters (backprop!)
-        optimizer.step()  # Use the gradients to take a step with SGD.
+        for i in range(0, len(train_x), batch_size):
+            X = X_train_torch[i:i + batch_size]  # Slice out a mini-batch of features
+            y = y_train_torch[i:i + batch_size]  # Slice out a mini-batch of targets
+
+            y_pred = model(X)  # Make predictions (final-layer activations)
+            l = loss(y_pred, y)  # Compute loss with respect to predictions
+
+            model.zero_grad()  # Reset all gradient accumulators to zero (PyTorch thing)
+            l.backward()  # Compute gradient of loss wrt all parameters (backprop!)
+            optimizer.step()  # Use the gradients to take a step with SGD.
 
         print("Epoch %d final minibatch had loss %.4f" % (epoch + 1, l.item()))
 
-    # Need to create a function to compute accuracy/score
-    predict = model(X_test_torch)
-    print(predict[0])
-    #model.eval()
-    value, indices = predict[0].max(0)
-    print("Y_test_torch: " + str(y_test_torch[0]))
-    y_value, y_indices = y_test_torch[0].max(0)
-    print(indices)
-    print("Match: " + str(y_indices == indices))
+    model.eval()
+    accuracy = Accuracy()
+    predictions = model(X_test_torch)
+    y_predictions = []
+    for prediction in predictions:
+        values, indices = prediction.max(0)
+        y_predictions.append(indices)
 
+    y_predictions = torch.from_numpy(np.array(y_predictions))
+
+    print("Testing Accuracy: " + str(accuracy(y_predictions, y_test_torch)))
+
+    predictions = model(X_train_torch)
+    y_predictions = []
+    for prediction in predictions:
+        values, indices = prediction.max(0)
+        y_predictions.append(indices)
+
+    y_predictions = torch.from_numpy(np.array(y_predictions))
+
+    print("Training Accuracy: " + str(accuracy(y_predictions, y_train_torch)))
 
 def ExperimentThree():
     #Using CNN and spectrogram images directly for classification
