@@ -9,7 +9,7 @@ from tools import FeatureExtractor
 import matplotlib.pyplot as plt
 
 def main():
-    FetchDataFeatures()
+    FetchGraphData()
     print('Extraction Completed')
 
 
@@ -64,6 +64,7 @@ def FetchGraphData():
     for genre in genres:
         genre_dir = dataset_dir+"/"+genre
         filenames = os.listdir(genre_dir)
+        counter = 20
         for filename in filenames:
             audio_path = genre_dir+'/'+filename
             x, sr = librosa.load(audio_path, mono=True, duration=10, offset=15)
@@ -74,10 +75,14 @@ def FetchGraphData():
             for feature in features:
                 to_append += f' {feature}'
 
+            to_append += f' {genre}'
             file = open('dataGraph.csv', 'a', newline='')
             with file:
                 writer = csv.writer(file)
                 writer.writerow(to_append.split())
+                counter = counter - 1
+            if counter == 0:
+                break
         print(f'{genre} has been completed')
 
 

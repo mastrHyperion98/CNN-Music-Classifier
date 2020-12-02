@@ -150,13 +150,14 @@ def ExperimentThree():
     train_x_torch = torch.from_numpy(train_x).float()
     train_x_torch = train_x_torch[:, None, :, :]
     #TO-DO: Reshape torch to be 3D and match form (train_x.shape[0],N,M) where each index of N and M are the target values
-    train_y_torch = torch.from_numpy(train_y).long()[:, None, None]
+    train_y = FeatureExtractor.TransformTarget(train_y, N, M)
+    train_y_torch = torch.from_numpy(train_y).long()
 
     torch.manual_seed(0)  # Ensure model weights initialized with same random numbers
 
     # Create an object that holds a sequence of layers and activation functions
     model = torch.nn.Sequential(
-        torch.nn.Conv2d(in_channels=1, out_channels=16, kernel_size=(3,3), stride=1, padding=0)
+        torch.nn.Conv2d(in_channels=1, out_channels=16, kernel_size=(3,3), stride=1, padding=1),
     )
 
     # Create an object that can compute "negative log likelihood of a softmax"
@@ -170,7 +171,6 @@ def ExperimentThree():
         for i in range(0, len(train_x), batch_size):
             X = train_x_torch[i:i + batch_size]  # Slice out a mini-batch of features
             y = train_y_torch[i:i + batch_size]  # Slice out a mini-batch of targets
-
             y_pred = model(X)  # Make predictions (final-layer activations)
             l = loss(y_pred, y)  # Compute loss with respect to predictions
 

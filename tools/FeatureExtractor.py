@@ -40,3 +40,13 @@ def Extract(x,sr, genre):
 def PreprocessData(data):
    scaler = preprocessing.StandardScaler()
    return scaler.fit_transform(np.array(data.iloc[:, :-1]))
+
+
+
+def TransformTarget(targets, N, M):
+    transformedTarget = []
+    for i in range(targets.shape[0]):
+        classification = targets[i]
+        transformedTarget.append(classification * np.ones(shape=(N,M)))
+
+    return np.array(transformedTarget)
