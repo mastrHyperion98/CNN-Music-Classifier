@@ -140,35 +140,49 @@ def ExperimentTwo():
 
 def ExperimentThree():
     #Using CNN and spectrogram images directly for classification
-    sr = 22050
-    X, y, genres = LoadData('dataGraph.csv')
+    X, y = LoadData('dataGraph.csv')
     # Split into training and testing data
     train_x, val_x, train_y, val_y = train_test_split(X, y, test_size=0.1)
-    # clf = RandomForestClassifier(max_depth=10, random_state=0)
-    # clf.fit(train_x, train_y)
-    # print(clf.score(val_x, val_y))
-    # converting training images into torch format
-
     # For the dataGraph there is a single channel'
-    img = train_x
-    print(img.shape)
-    img = img.reshape(72, 128, 431)
-    print(img.shape)
-    tensor = torch.from_numpy(img).float()
-    tensor = tensor[:, None, None, :, :]
-    print(tensor)
+    N = 128
+    M = 431
+    train_x = train_x.reshape(train_x.shape[0], N, M)
+    train_x_torch = torch.from_numpy(train_x).float()
+    train_x_torch = train_x_torch[:, None, :, :]
+    #TO-DO: Reshape torch to be 3D and match form (train_x.shape[0],N,M) where each index of N and M are the target values
+    train_y_torch = torch.from_numpy(train_y).long()[:, None, None]
 
-    for i in range(3):
-        dimg = tensor[i]
-        torch.manual_seed(0);  # Ensure PyTorch uses same random initial weights
-        conv = torch.nn.Conv2d(in_channels=1, out_channels=2, kernel_size=2, stride=1, padding=0)
-        a = conv(dimg)
+    torch.manual_seed(0)  # Ensure model weights initialized with same random numbers
 
-        plot_channels(a[0])
+    # Create an object that holds a sequence of layers and activation functions
+    model = torch.nn.Sequential(
+        torch.nn.Conv2d(in_channels=1, out_channels=16, kernel_size=(3,3), stride=1, padding=0)
+    )
+
+    # Create an object that can compute "negative log likelihood of a softmax"
+    loss = torch.nn.CrossEntropyLoss()
+    optimizer = torch.optim.SGD(model.parameters(), lr=0.01, momentum=0.9)
+    # Make 10 passes over the training data, each time using batch_size samples to compute gradient
+    num_epoch = 1000
+    batch_size = 25 # batch size 25
+    model.train()
+    for epoch in range(num_epoch):
+        for i in range(0, len(train_x), batch_size):
+            X = train_x_torch[i:i + batch_size]  # Slice out a mini-batch of features
+            y = train_y_torch[i:i + batch_size]  # Slice out a mini-batch of targets
+
+            y_pred = model(X)  # Make predictions (final-layer activations)
+            l = loss(y_pred, y)  # Compute loss with respect to predictions
+
+            model.zero_grad()  # Reset all gradient accumulators to zero (PyTorch thing)
+            l.backward()  # Compute gradient of loss wrt all parameters (backprop!)
+            optimizer.step()  # Use the gradients to take a step with SGD.
+
+        print("Epoch %d final minibatch had loss %.4f" % (epoch + 1, l.item()))
 
 
 def main():
-   ExperimentTwo()
+   ExperimentThree()
 
 
 
