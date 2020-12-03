@@ -1,6 +1,7 @@
 # DataExtraction.py is the script used to read all our music files and extract the required information into a csv file
 # The csv file will be fed into the CNN and it will be used to speed up testing with the neural network.
 # Reading all the music files and extracting the data is expected to take a long time.
+
 import csv
 import os
 import librosa
@@ -47,10 +48,10 @@ def FetchDataFeatures():
 
 
 def FetchGraphData():
-    numRows = 128
-    numCols = 431
+    num_rows = 1025
+    num_cols = 1292
     header = ''
-    for i in range(1, numRows*numCols+1):
+    for i in range(1, num_rows*num_cols+1):
         header += f' db{i}'
     header += ' label'
     header = header.split()
@@ -66,27 +67,32 @@ def FetchGraphData():
         genre_dir = dataset_dir+"/"+genre
         if os.path.isdir(genre_dir):
             filenames = os.listdir(genre_dir)
-            counter = 20
+            index = 0
             for filename in filenames:
                 if ".ogg" in filename:
-                    audio_path = genre_dir+'/'+filename
-                    print('Audio path: ' + audio_path)
-                    x, sr = librosa.load(audio_path, mono=True, duration=10, offset=15)
-                    mels_spectrogram = librosa.feature.melspectrogram(x, sr, n_mels=128)
-                    Xdb = librosa.power_to_db(mels_spectrogram, ref=np.max)
-                    features = np.reshape(Xdb, (numCols*numRows,))
-                    to_append = ''
-                    for feature in features:
-                        to_append += f' {feature}'
+                    for sample_x in range(3):
+                        index += 1
+                        audio_path = os.path.dirname(os.path.abspath(
+                            __file__)) + '/' + genre_dir+'/'+filename
+                        print(str(index) + ' Audio path: ' + audio_path)
+                        output, sample_rate = librosa.load(audio_path, sr=44100, mono=True,
+                                                           duration=30, offset=30*(sample_x+1))
+                        print('o shape', output.shape)
+                        mels_spectrogram = librosa.feature.melspectrogram(output, sample_rate,
+                                                                          n_fft=2048, hop_length=1024,
+                                                                          n_mels=128)
+                        Xdb = librosa.power_to_db(mels_spectrogram, ref=np.max)
+                        features = np.reshape(Xdb, (num_cols*num_rows,))
+                        to_append = ''
+                        for feature in features:
+                            to_append += f' {feature}'
 
-                    to_append += f' {genre}'
-                    file = open('dataGraph.csv', 'a', newline='')
-                    with file:
-                        writer = csv.writer(file)
-                        writer.writerow(to_append.split())
-                        counter = counter - 1
-                    if counter == 0:
-                        break
+                        to_append += f' {genre}'
+                        file = open('dataGraph.csv', 'a', newline='')
+                        with file:
+                            writer = csv.writer(file)
+                            writer.writerow(to_append.split())
+
             print(f'{genre} has been completed')
 
 
