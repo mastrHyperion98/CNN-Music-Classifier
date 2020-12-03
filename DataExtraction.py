@@ -8,6 +8,7 @@ import numpy as np
 from tools import FeatureExtractor
 import matplotlib.pyplot as plt
 
+
 def main():
     FetchGraphData()
     print('Extraction Completed')
@@ -46,8 +47,8 @@ def FetchDataFeatures():
 
 
 def FetchGraphData():
-    numRows=128
-    numCols=431
+    numRows = 128
+    numCols = 431
     header = ''
     for i in range(1, numRows*numCols+1):
         header += f' db{i}'
@@ -63,27 +64,30 @@ def FetchGraphData():
     genres = os.listdir(path=dataset_dir)
     for genre in genres:
         genre_dir = dataset_dir+"/"+genre
-        filenames = os.listdir(genre_dir)
-        counter = 20
-        for filename in filenames:
-            audio_path = genre_dir+'/'+filename
-            x, sr = librosa.load(audio_path, mono=True, duration=10, offset=15)
-            mels_spectrogram = librosa.feature.melspectrogram(x, sr, n_mels=128)
-            Xdb = librosa.power_to_db(mels_spectrogram, ref=np.max)
-            features = np.reshape(Xdb,(numCols*numRows,))
-            to_append = ''
-            for feature in features:
-                to_append += f' {feature}'
+        if os.path.isdir(genre_dir):
+            filenames = os.listdir(genre_dir)
+            counter = 20
+            for filename in filenames:
+                if ".ogg" in filename:
+                    audio_path = genre_dir+'/'+filename
+                    print('Audio path: ' + audio_path)
+                    x, sr = librosa.load(audio_path, mono=True, duration=10, offset=15)
+                    mels_spectrogram = librosa.feature.melspectrogram(x, sr, n_mels=128)
+                    Xdb = librosa.power_to_db(mels_spectrogram, ref=np.max)
+                    features = np.reshape(Xdb, (numCols*numRows,))
+                    to_append = ''
+                    for feature in features:
+                        to_append += f' {feature}'
 
-            to_append += f' {genre}'
-            file = open('dataGraph.csv', 'a', newline='')
-            with file:
-                writer = csv.writer(file)
-                writer.writerow(to_append.split())
-                counter = counter - 1
-            if counter == 0:
-                break
-        print(f'{genre} has been completed')
+                    to_append += f' {genre}'
+                    file = open('dataGraph.csv', 'a', newline='')
+                    with file:
+                        writer = csv.writer(file)
+                        writer.writerow(to_append.split())
+                        counter = counter - 1
+                    if counter == 0:
+                        break
+            print(f'{genre} has been completed')
 
 
 if __name__ == '__main__':

@@ -45,5 +45,10 @@ pip-log.txt
 pip-delete-this-directory.txt
 
 .idea
-dataset/
+.vscode
+.DS_Store
+
+dataset
+datasett
 samples/
+
