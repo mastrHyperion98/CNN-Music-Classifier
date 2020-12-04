@@ -74,7 +74,7 @@ def ExperimentOne():
     max_depth = 30
     n_estimators = 100
     # load our data
-    X, y, genres = LoadData('dataGraph.csv')
+    X, y, genres = LoadData('data.csv')
     train_x, val_x, train_y, val_y = train_test_split(X, y, test_size=0.1)
     clf = RandomForestClassifier(max_depth=max_depth, bootstrap=True,
                                  n_estimators=n_estimators, random_state=0)
@@ -98,7 +98,8 @@ def ExperimentOne():
     plt.show()
 
 
-def ExperimentTwo(X, y):
+def ExperimentTwo():
+    X, y, genres = LoadData('data.csv')
     # Experiment two is very similar to Experiment One but using a Neural Network instead
     print("#########\tExperiment Two: Neural Network Classifier\t#########")
 
