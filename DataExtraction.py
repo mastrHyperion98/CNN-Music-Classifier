@@ -3,11 +3,14 @@
 # Reading all the music files and extracting the data is expected to take a long time.
 
 import csv
+import random
 import os
+import warnings
 import librosa
 import numpy as np
+# import matplotlib.pyplot as plt
 from tools import FeatureExtractor
-import matplotlib.pyplot as plt
+warnings.filterwarnings('ignore')
 
 
 def main():
@@ -48,7 +51,7 @@ def FetchDataFeatures():
 
 
 def FetchGraphData():
-    num_rows = 1025
+    num_rows = 128
     num_cols = 1292
     header = ''
     for i in range(1, num_rows*num_cols+1):
@@ -70,28 +73,27 @@ def FetchGraphData():
             index = 0
             for filename in filenames:
                 if ".ogg" in filename:
-                    for sample_x in range(3):
-                        index += 1
-                        audio_path = os.path.dirname(os.path.abspath(
-                            __file__)) + '/' + genre_dir+'/'+filename
-                        print(str(index) + ' Audio path: ' + audio_path)
-                        output, sample_rate = librosa.load(audio_path, sr=44100, mono=True,
-                                                           duration=30, offset=30*(sample_x+1))
-                        print('o shape', output.shape)
-                        mels_spectrogram = librosa.feature.melspectrogram(output, sample_rate,
-                                                                          n_fft=2048, hop_length=1024,
-                                                                          n_mels=128)
-                        Xdb = librosa.power_to_db(mels_spectrogram, ref=np.max)
-                        features = np.reshape(Xdb, (num_cols*num_rows,))
-                        to_append = ''
-                        for feature in features:
-                            to_append += f' {feature}'
+                    index += 1
+                    offset_int = random.randint(30, 90)
+                    audio_path = os.path.dirname(os.path.abspath(
+                        __file__)) + '/' + genre_dir+'/'+filename
+                    print(str(index) + ' Audio path: ' + audio_path + ', offset: ' + str(offset_int))
+                    output, sample_rate = librosa.load(audio_path, sr=44100, mono=True,
+                                                       duration=30, offset=offset_int)
+                    mels_spectrogram = librosa.feature.melspectrogram(output, sample_rate,
+                                                                      n_fft=2048, hop_length=1024,
+                                                                      n_mels=128)
+                    Xdb = librosa.power_to_db(mels_spectrogram, ref=np.max)
+                    features = np.reshape(Xdb, (num_cols*num_rows,))
+                    to_append = ''
+                    for feature in features:
+                        to_append += f' {feature}'
 
-                        to_append += f' {genre}'
-                        file = open('dataGraph.csv', 'a', newline='')
-                        with file:
-                            writer = csv.writer(file)
-                            writer.writerow(to_append.split())
+                    to_append += f' {genre}'
+                    file = open('dataGraph.csv', 'a', newline='')
+                    with file:
+                        writer = csv.writer(file)
+                        writer.writerow(to_append.split())
 
             print(f'{genre} has been completed')
 

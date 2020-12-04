@@ -106,7 +106,7 @@ def ExperimentTwo():
     train_x, val_x, train_y, val_y = train_test_split(X, y, test_size=0.1, shuffle=True)
     X_train_torch = torch.from_numpy(train_x).float()
     y_train_torch = torch.from_numpy(train_y).long()
-    X_test_torch = torch.from_numpy(val_x).float()
+    x_test_torch = torch.from_numpy(val_x).float()
     y_test_torch = torch.from_numpy(val_y).long()
 
     torch.manual_seed(0)  # Ensure model weights initialized with same random numbers
@@ -143,7 +143,7 @@ def ExperimentTwo():
 
     model.eval()
     accuracy = Accuracy()
-    predictions = model(X_test_torch)
+    predictions = model(x_test_torch)
     y_predictions = []
     for prediction in predictions:
         values, indices = prediction.max(0)
@@ -168,12 +168,12 @@ def ExperimentThree():
     # Using CNN and spectrogram images directly for classification
     X, y = LoadData('dataGraph.csv')
     # Split into training and testing data
-    train_X, test_X, train_y, test_y = train_test_split(X, y, test_size=0.1)
+    train_x, test_x, train_y, test_y = train_test_split(X, y, test_size=0.1)
     # For the dataGraph there is a single channel'
     N = 128
-    M = 431
-    train_X = train_X.reshape(train_X.shape[0], N, M)
-    train_x_torch = torch.from_numpy(train_X).float()
+    M = 1292
+    train_x = train_x.reshape(train_x.shape[0], N, M)
+    train_x_torch = torch.from_numpy(train_x).float()
     train_x_torch = train_x_torch[:, None, :, :]
     # TO-DO: Reshape torch to be 3D and match form (train_x.shape[0],N,M) where each index of N and M are the target values
     train_y = FeatureExtractor.TransformTarget(train_y, N, M)
@@ -190,11 +190,11 @@ def ExperimentThree():
     loss = torch.nn.CrossEntropyLoss()
     optimizer = torch.optim.SGD(model.parameters(), lr=0.01, momentum=0.9)
     # Make 10 passes over the training data, each time using batch_size samples to compute gradient
-    num_epoch = 2
+    num_epoch = 50
     batch_size = 25  # batch size 25
     model.train()
     for epoch in range(num_epoch):
-        for i in range(0, len(train_X), batch_size):
+        for i in range(0, len(train_x), batch_size):
             X = train_x_torch[i:i + batch_size]  # Slice out a mini-batch of features
             y = train_y_torch[i:i + batch_size]  # Slice out a mini-batch of targets
             y_pred = model(X)  # Make predictions (final-layer activations)
@@ -203,11 +203,15 @@ def ExperimentThree():
             model.zero_grad()  # Reset all gradient accumulators to zero (PyTorch thing)
             l.backward()  # Compute gradient of loss wrt all parameters (backprop!)
             optimizer.step()  # Use the gradients to take a step with SGD.
+            print('mini-batch done')
 
         print("Epoch %d final minibatch had loss %.4f" % (epoch + 1, l.item()))
+
+    x_test_torch = torch.from_numpy(test_x).float()
+    y_test_torch = torch.from_numpy(test_y).long()
     model.eval()
     accuracy = Accuracy()
-    predictions = model(X_test_torch)
+    predictions = model(x_test_torch)
     y_predictions = []
     for prediction in predictions:
         values, indices = prediction.max(0)
