@@ -59,7 +59,7 @@ def FetchGraphData():
     header += ' label'
     header = header.split()
 
-    file = open('dataGraph.csv', 'w', newline='')
+    file = open('dataGraph-50.csv', 'w', newline='')
     with file:
         writer = csv.writer(file)
         writer.writerow(header)
@@ -71,6 +71,7 @@ def FetchGraphData():
         if os.path.isdir(genre_dir):
             filenames = os.listdir(genre_dir)
             index = 0
+            counter = 50
             for filename in filenames:
                 if ".ogg" in filename:
                     index += 1
@@ -83,8 +84,8 @@ def FetchGraphData():
                     mels_spectrogram = librosa.feature.melspectrogram(output, sample_rate,
                                                                       n_fft=2048, hop_length=1024,
                                                                       n_mels=128)
-                    Xdb = librosa.power_to_db(mels_spectrogram, ref=np.max)
-                    features = np.reshape(Xdb, (num_cols*num_rows,))
+                    x_db = librosa.power_to_db(mels_spectrogram, ref=np.max)
+                    features = np.reshape(x_db, (num_cols*num_rows,))
                     to_append = ''
                     for feature in features:
                         to_append += f' {feature}'
@@ -94,7 +95,9 @@ def FetchGraphData():
                     with file:
                         writer = csv.writer(file)
                         writer.writerow(to_append.split())
-
+                        counter = counter - 1
+                    if counter == 0:
+                        break
             print(f'{genre} has been completed')
 
 
