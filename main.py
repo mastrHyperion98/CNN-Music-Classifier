@@ -87,7 +87,6 @@ def output_analytics(predictions, target, label, filename):
     rec = Recall(num_classes=8)
     f1 = F1(num_classes=8)
     mse = MeanSquaredError()
-    msle = MeanSquaredLogError()
     accuracy = acc(predict, target)
     precision = prec(predict, target)
     recall = rec(predict, target)
@@ -208,7 +207,7 @@ def experiment_three():
     N = 128
 
     M = round(646/15 * TRACK_LENGTH)
-    REDUCTION_KERNEL_SIZE = round(42/646 * M)
+    REDUCTION_KERNEL_SIZE = round((42/646 * M)/3.5)
     train_x = train_x.reshape(train_x.shape[0], N, M)
     val_x = val_x.reshape(val_x.shape[0], N, M)
     train_x_torch = torch.from_numpy(train_x).float()
@@ -228,19 +227,24 @@ def experiment_three():
         torch.nn.ReLU(),
 
         torch.nn.MaxPool2d(kernel_size=(2, 4)),
-        torch.nn.Dropout2d(p=0.1),
-        torch.nn.ReLU(),
+        torch.nn.Dropout2d(p=0.2),
 
         torch.nn.Conv2d(in_channels=32, out_channels=64, kernel_size=(3, 3), stride=1, padding=1),
         torch.nn.ReLU(),
 
         torch.nn.MaxPool2d(kernel_size=(2, 4)),
+
+        torch.nn.Conv2d(in_channels=64, out_channels=128, kernel_size=(3, 3), stride=1, padding=1),
         torch.nn.ReLU(),
 
-        torch.nn.Conv2d(in_channels=64, out_channels=64, kernel_size=(34, REDUCTION_KERNEL_SIZE ), stride=1, padding=1),
+        torch.nn.MaxPool2d(kernel_size=(2, 4)),
+        torch.nn.Dropout2d(p=0.2),
+
+        torch.nn.Conv2d(in_channels=128, out_channels=256, kernel_size=(18, REDUCTION_KERNEL_SIZE), stride=1,padding=1),
         torch.nn.ReLU(),
 
-        torch.nn.Conv2d(in_channels=64, out_channels=8, kernel_size=(3, 3), stride=1, padding=1),
+        torch.nn.Conv2d(in_channels=256, out_channels=8, kernel_size=(3, 3), stride=1, padding=1),
+        torch.nn.ReLU(),
         torch.nn.Flatten(),
     )
 
@@ -248,12 +252,12 @@ def experiment_three():
     loss = torch.nn.CrossEntropyLoss()
     optimizer = torch.optim.SGD(model.parameters(), lr=0.01, momentum=0.9)
     # Make 10 passes over the training data, each time using batch_size samples to compute gradient
-    num_epoch = 20
+    num_epoch = 40
     batch_size = 80 # batch size 25
     model.train()
 
     loss_list = []
-    epoch_list = np.arange(1,21,1, dtype='int64')
+    epoch_list = np.arange(1,41,1, dtype='int64')
     for epoch in range(num_epoch):
         for i in range(0, len(train_x), batch_size):
             X = train_x_torch[i:i + batch_size]  # Slice out a mini-batch of features
@@ -271,7 +275,8 @@ def experiment_three():
     model.eval()
 
     plot_loss(epoch_list, loss_list, "CNN of Spectrogram Loss vs Epoch ("+f'{train_x.shape[0]} samples)','LossPltCNN.png')
-    output_analytics(model(test_x_torch), test_y_torch, labels, "CNN_Test_Analytics")
+    output_analytics(model(test_x_torch), test_y_torch, labels, "CNN_Test_Analytics")   # Testing Analytics
+    #output_analytics(model(train_x_torch), train_y_torch, labels, "CNN_Train_Analytics")    #Training Analytics
 
 
 def main():
