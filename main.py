@@ -20,13 +20,11 @@ import pandas as pd
 import matplotlib.pyplot as plt
 
 
-def load_data(filename):
+def load_data(filename, labelEncoder):
     # Read our extracted data into a pandas dataframe
     dataframe = pd.read_csv(filename)
     # Next up we want to use sklearn preprocessing Label Encoder to turn our labels into numerics
     genres = dataframe.iloc[:, -1]
-    # we will create an encoder
-    labelEncoder = LabelEncoder()
     # create our y dataset
     y = labelEncoder.fit_transform(genres)
     # Extract and preprocess our features from the dataframe
@@ -56,10 +54,13 @@ def plot_loss(X, y, title, outputFile):
     plt.show()
 
 
-def plot_confusion_matrix(pred, target, title, outputFile):
+def plot_confusion_matrix(pred, target, label, title, outputFile):
     matrix = confusion_matrix(pred, target, normalize=True)
+    plt.figure(figsize=(150,150))
     im = plt.matshow(matrix, cmap='gist_gray')
     plt.title(title)
+    plt.xticks(np.arange(0,8,1), labels=label, rotation=90)
+    plt.yticks(np.arange(0,8,1), labels=label)
     for (i, j), z in np.ndenumerate(matrix):
         plt.text(j, i, '{:0.1f}'.format(z), ha='center', va='center')
     plt.colorbar()
@@ -163,13 +164,15 @@ def experiment_two(X, y):
 
 def experiment_three():
     #Using CNN and spectrogram images directly for classification
-    X, y = load_data('dataGraph.csv')
+    labelEncoder = LabelEncoder()
+    X, y = load_data('dataGraphFull.csv',labelEncoder)
+    labels = labelEncoder.inverse_transform(np.arange(0, 8, 1))
     # Split into training and testing data
     train_x, val_x, train_y, val_y = train_test_split(X, y, test_size=0.2)
     del X
     del y
     # For the dataGraph there is a single channel'
-    TRACK_LENGTH = 10
+    TRACK_LENGTH = 15
     N = 128
 
     M = round(646/15 * TRACK_LENGTH)
@@ -197,15 +200,16 @@ def experiment_three():
         torch.nn.MaxPool2d(kernel_size=(2, 4)),
         torch.nn.Dropout2d(p=0.1),
 
+
         torch.nn.Conv2d(in_channels=32, out_channels=64, kernel_size=(3, 3), stride=1, padding=1),
         torch.nn.ReLU(),
 
         torch.nn.MaxPool2d(kernel_size=(2, 4)),
 
-        torch.nn.Conv2d(in_channels=64, out_channels=64, kernel_size=(34, REDUCTION_KERNEL_SIZE ), stride=1, padding=1),
+        torch.nn.Conv2d(in_channels=64, out_channels=128, kernel_size=(34, REDUCTION_KERNEL_SIZE ), stride=1, padding=1),
         torch.nn.ReLU(),
 
-        torch.nn.Conv2d(in_channels=64, out_channels=8, kernel_size=(3, 3), stride=1, padding=1),
+        torch.nn.Conv2d(in_channels=128, out_channels=8, kernel_size=(3, 3), stride=1, padding=1),
         torch.nn.Flatten(),
     )
 
@@ -214,7 +218,7 @@ def experiment_three():
     optimizer = torch.optim.SGD(model.parameters(), lr=0.01, momentum=0.9)
     # Make 10 passes over the training data, each time using batch_size samples to compute gradient
     num_epoch = 15
-    batch_size = 30 # batch size 25
+    batch_size = 80 # batch size 25
     model.train()
 
     loss_list = []
@@ -237,13 +241,13 @@ def experiment_three():
 
     accuracy = Accuracy()
     y_predictions = []
-    for prediction in model(train_x_torch):
+    for prediction in model(train_x_torch[:300]):
         values, indices = prediction.max(0)
         y_predictions.append(indices)
 
 
     y_predictions = torch.from_numpy(np.array(y_predictions))
-    print("Training Accuracy: " + str(accuracy(y_predictions, train_y_torch)))
+    print("Training Accuracy: " + str(accuracy(y_predictions, train_y_torch[:300])))
 
     y_predictions = []
     for prediction in model(test_x_torch):
@@ -253,7 +257,7 @@ def experiment_three():
     y_predictions = torch.from_numpy(np.array(y_predictions))
     print("Testing Accuracy: " + str(accuracy(y_predictions, test_y_torch)))
     plot_loss(epoch_list, loss_list, "CNN of Spectrogram Loss vs Epoch ("+f'{train_x.shape[0]} samples)','LossPltCNN.png')
-    plot_confusion_matrix(y_predictions, test_y_torch, "CNN of Spectrogram Confusion Matrix ("+f'{val_x.shape[0]} test samples)', 'confusionMatrixCNN.png')
+    plot_confusion_matrix(y_predictions, test_y_torch, labels, "CNN Confusion Matrix ("+f'{val_x.shape[0]} test samples)', 'confusionMatrixCNN.png')
 
 
 def main():
