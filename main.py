@@ -147,12 +147,12 @@ def ExperimentTwo(X, y):
 
 def ExperimentThree():
     #Using CNN and spectrogram images directly for classification
-    X, y = LoadData('dataGraph.csv')
+    X, y = LoadData('dataGraphFull.csv')
     # Split into training and testing data
     train_x, val_x, train_y, val_y = train_test_split(X, y, test_size=0.2)
     # For the dataGraph there is a single channel'
     N = 128
-    M = 431
+    M = 646
     train_x = train_x.reshape(train_x.shape[0], N, M)
     val_x = val_x.reshape(val_x.shape[0], N, M)
     train_x_torch = torch.from_numpy(train_x).float()
@@ -161,7 +161,7 @@ def ExperimentThree():
 
     # Transform/Reshape our targets
     #train_y = FeatureExtractor.TransformTarget(train_y, 1,1) # output shape of form [Size, 1, 1]
-    val_y = FeatureExtractor.TransformTarget(val_y, 1,1) # output shape of form [Size, 1, 1]
+    #val_y = FeatureExtractor.TransformTarget(val_y, 1,1) # output shape of form [Size, 1, 1]
     train_y_torch = torch.from_numpy(train_y).long()
     test_y_torch = torch.from_numpy(val_y).long()
 
@@ -173,20 +173,19 @@ def ExperimentThree():
         torch.nn.Conv2d(in_channels=1, out_channels=32, kernel_size=(3,3), stride=1, padding=1),
         torch.nn.ReLU(),
 
-        torch.nn.Conv2d(in_channels=32, out_channels=32, kernel_size=(3, 3), stride=1, padding=1),
-        torch.nn.ReLU(),
-
-        torch.nn.MaxPool2d(kernel_size=(2, 2)),
-        torch.nn.Dropout2d(p=0.5),
+        torch.nn.MaxPool2d(kernel_size=(2, 4)),
+        torch.nn.Dropout2d(p=0.2),
 
         torch.nn.Conv2d(in_channels=32, out_channels=64, kernel_size=(3, 3), stride=1, padding=1),
         torch.nn.ReLU(),
 
-        torch.nn.Conv2d(in_channels=64, out_channels=64, kernel_size=(66, 217), stride=1, padding=1),
+        torch.nn.MaxPool2d(kernel_size=(2, 4)),
+
+        torch.nn.Conv2d(in_channels=64, out_channels=64, kernel_size=(34, 28), stride=1, padding=1),
         torch.nn.ReLU(),
 
         torch.nn.Conv2d(in_channels=64, out_channels=8, kernel_size=(3, 3), stride=1, padding=1),
-        torch.nn.Flatten()
+        torch.nn.Flatten(),
     )
 
     # Create an object that can compute "negative log likelihood of a softmax"
@@ -194,7 +193,7 @@ def ExperimentThree():
     optimizer = torch.optim.SGD(model.parameters(), lr=0.01, momentum=0.9)
     # Make 10 passes over the training data, each time using batch_size samples to compute gradient
     num_epoch = 10
-    batch_size = 20 # batch size 25
+    batch_size = 80 # batch size 25
     model.train()
     for epoch in range(num_epoch):
         for i in range(0, len(train_x), batch_size):
@@ -222,6 +221,17 @@ def ExperimentThree():
     y_predictions = torch.from_numpy(np.array(y_predictions))
     y_values = torch.from_numpy(TargetValues(train_y_torch))
     print("Training Accuracy: " + str(accuracy(y_predictions, y_values)))
+
+    accuracy = Accuracy()
+    predictions = model(test_x_torch)
+    y_predictions = []
+    for prediction in predictions:
+        values, indices = prediction.max(0)
+        y_predictions.append(indices)
+
+    y_predictions = torch.from_numpy(np.array(y_predictions))
+    y_values = torch.from_numpy(TargetValues(test_y_torch))
+    print("Testing Accuracy: " + str(accuracy(y_predictions, y_values)))
 
 def main():
    ExperimentThree()
