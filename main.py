@@ -8,6 +8,7 @@ from torch.autograd import Variable
 from torch.nn import Linear, ReLU, CrossEntropyLoss, Sequential, Conv2d, MaxPool2d, Module, Softmax, BatchNorm2d, Dropout
 from torch.optim import Adam, SGD
 from pytorch_lightning.metrics import Accuracy
+from pytorch_lightning.metrics.functional.classification import confusion_matrix
 from sklearn.preprocessing import LabelEncoder
 from sklearn.model_selection import train_test_split
 from torch.autograd import Variable
@@ -19,7 +20,7 @@ import pandas as pd
 import matplotlib.pyplot as plt
 
 
-def LoadData(filename):
+def load_data(filename):
     # Read our extracted data into a pandas dataframe
     dataframe = pd.read_csv(filename)
     # Next up we want to use sklearn preprocessing Label Encoder to turn our labels into numerics
@@ -45,21 +46,34 @@ def plot_channels(x, **kwargs):
         plt.show()
 
 
-def TargetValues(torch):
-    y_values = []
-    for prediction in torch:
-        values, indices = prediction.max(0)
-        y_values.append(values)
-    return np.array(y_values)
+def plot_loss(X, y, title, outputFile):
+    # We will print stuff here
+    plt.plot(X, y)
+    plt.title(title)
+    plt.xlabel("Epoch")
+    plt.ylabel("Loss")
+    plt.savefig(outputFile)
+    plt.show()
 
-def ExperimentOne(X, y):
+
+def plot_confusion_matrix(pred, target, title, outputFile):
+    matrix = confusion_matrix(pred, target, normalize=True)
+    im = plt.matshow(matrix, cmap='gist_gray')
+    plt.title(title)
+    for (i, j), z in np.ndenumerate(matrix):
+        plt.text(j, i, '{:0.1f}'.format(z), ha='center', va='center')
+    plt.colorbar()
+    plt.savefig(outputFile)
+    plt.show()
+
+
+def experiment_one(X, y):
     #Experiment One and two uses our extrapolated features to try and create a fast and efficient trainer.
     #Here we will be using a RandomForestClassifier of max_depth 20 and 200 estimators to estimate our resuts.
     print("#########\tExperiment One: RandomForest Classifier\t#########")
     max_depth = 26
     n_estimators = 100
     # load our data
-    X, y = LoadData('data.csv')
     train_x, val_x, train_y, val_y=  train_test_split(X,y, test_size=0.1)
     clf = RandomForestClassifier(max_depth=max_depth, bootstrap=True, n_estimators=n_estimators, random_state=0)
     clf.fit(train_x, train_y)
@@ -82,7 +96,7 @@ def ExperimentOne(X, y):
     plt.show()
 
 
-def ExperimentTwo(X, y):
+def experiment_two(X, y):
     #Experiment two is very similar to Experiment One but using a Neural Network instead
     print("#########\tExperiment Two: Neural Network Classifier\t#########")
     # Your code here. Aim for 2-4 lines.
@@ -147,19 +161,19 @@ def ExperimentTwo(X, y):
 
     print("Training Accuracy: " + str(accuracy(y_predictions, y_train_torch)))
 
-def ExperimentThree():
+def experiment_three():
     #Using CNN and spectrogram images directly for classification
-    X, y = LoadData('dataGraphFull.csv')
+    X, y = load_data('dataGraph.csv')
     # Split into training and testing data
     train_x, val_x, train_y, val_y = train_test_split(X, y, test_size=0.2)
     del X
     del y
     # For the dataGraph there is a single channel'
-    TRACK_LENGTH = 15
+    TRACK_LENGTH = 10
     N = 128
 
-    M = math.ceil(646/15 * TRACK_LENGTH)
-    REDUCTION_KERNEL_SIZE = math.ceil(42/646 * M)
+    M = round(646/15 * TRACK_LENGTH)
+    REDUCTION_KERNEL_SIZE = round(42/646 * M)
     train_x = train_x.reshape(train_x.shape[0], N, M)
     val_x = val_x.reshape(val_x.shape[0], N, M)
     train_x_torch = torch.from_numpy(train_x).float()
@@ -199,9 +213,12 @@ def ExperimentThree():
     loss = torch.nn.CrossEntropyLoss()
     optimizer = torch.optim.SGD(model.parameters(), lr=0.01, momentum=0.9)
     # Make 10 passes over the training data, each time using batch_size samples to compute gradient
-    num_epoch = 20
-    batch_size = 80 # batch size 25
+    num_epoch = 15
+    batch_size = 30 # batch size 25
     model.train()
+
+    loss_list = []
+    epoch_list = np.arange(1,16,1, dtype='int64')
     for epoch in range(num_epoch):
         for i in range(0, len(train_x), batch_size):
             X = train_x_torch[i:i + batch_size]  # Slice out a mini-batch of features
@@ -212,21 +229,21 @@ def ExperimentThree():
             model.zero_grad()  # Reset all gradient accumulators to zero (PyTorch thing)
             l.backward()  # Compute gradient of loss wrt all parameters (backprop!)
             optimizer.step()  # Use the gradients to take a step with SGD.
-
+        # Add loss to the list
+        loss_list.append(l.item())
         print("Epoch %d final minibatch had loss %.4f" % (epoch + 1, l.item()))
 
     model.eval()
 
     accuracy = Accuracy()
     y_predictions = []
-    for prediction in model(train_x_torch[:300]):
+    for prediction in model(train_x_torch):
         values, indices = prediction.max(0)
         y_predictions.append(indices)
 
 
     y_predictions = torch.from_numpy(np.array(y_predictions))
-    y_values = torch.from_numpy(TargetValues(train_y_torch[:300]))
-    print("Training Accuracy: " + str(accuracy(y_predictions, y_values)))
+    print("Training Accuracy: " + str(accuracy(y_predictions, train_y_torch)))
 
     y_predictions = []
     for prediction in model(test_x_torch):
@@ -234,11 +251,13 @@ def ExperimentThree():
         y_predictions.append(indices)
 
     y_predictions = torch.from_numpy(np.array(y_predictions))
-    y_values = torch.from_numpy(TargetValues(test_y_torch))
-    print("Testing Accuracy: " + str(accuracy(y_predictions, y_values)))
+    print("Testing Accuracy: " + str(accuracy(y_predictions, test_y_torch)))
+    plot_loss(epoch_list, loss_list, "CNN of Spectrogram Loss vs Epoch ("+f'{train_x.shape[0]} samples)','LossPltCNN.png')
+    plot_confusion_matrix(y_predictions, test_y_torch, "CNN of Spectrogram Confusion Matrix ("+f'{val_x.shape[0]} test samples)', 'confusionMatrixCNN.png')
+
 
 def main():
-   ExperimentThree()
+  experiment_three()
 
 
 
