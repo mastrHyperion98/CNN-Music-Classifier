@@ -159,12 +159,16 @@ def ExperimentThree():
     model = torch.nn.Sequential(
         torch.nn.Conv2d(in_channels=1, out_channels=16, kernel_size=(3,3), stride=1, padding=1),
         torch.nn.ReLU(),
+        torch.nn.Dropout2d(p=0.1),
         torch.nn.MaxPool2d(kernel_size=(2,4)),
         torch.nn.Conv2d(in_channels=16, out_channels=32, kernel_size=(3, 3), stride=1, padding=1),
         torch.nn.ReLU(),
+        torch.nn.Dropout2d(p=0.1),
         torch.nn.MaxPool2d(kernel_size=(2, 4)),
         torch.nn.Conv2d(in_channels=32, out_channels=64, kernel_size=(34, 28), stride=1, padding=1),
         torch.nn.ReLU(),
+        torch.nn.Dropout2d(p=0.1),
+        torch.nn.Conv2d(in_channels=64, out_channels=8, kernel_size=(3, 3), stride=1, padding=1),
         #torch.nn.Softmax2d(),
     )
 
@@ -172,8 +176,8 @@ def ExperimentThree():
     loss = torch.nn.CrossEntropyLoss()
     optimizer = torch.optim.SGD(model.parameters(), lr=0.01, momentum=0.9)
     # Make 10 passes over the training data, each time using batch_size samples to compute gradient
-    num_epoch = 10
-    batch_size = 25 # batch size 25
+    num_epoch = 100
+    batch_size = 30 # batch size 25
     model.train()
     for epoch in range(num_epoch):
         for i in range(0, len(train_x), batch_size):
