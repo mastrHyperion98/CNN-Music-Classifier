@@ -1,3 +1,5 @@
+import math
+
 import librosa
 import sklearn.neural_network
 
@@ -150,9 +152,14 @@ def ExperimentThree():
     X, y = LoadData('dataGraphFull.csv')
     # Split into training and testing data
     train_x, val_x, train_y, val_y = train_test_split(X, y, test_size=0.2)
+    del X
+    del y
     # For the dataGraph there is a single channel'
+    TRACK_LENGTH = 15
     N = 128
-    M = 646
+
+    M = math.ceil(646/15 * TRACK_LENGTH)
+    REDUCTION_KERNEL_SIZE = math.ceil(42/646 * M)
     train_x = train_x.reshape(train_x.shape[0], N, M)
     val_x = val_x.reshape(val_x.shape[0], N, M)
     train_x_torch = torch.from_numpy(train_x).float()
@@ -174,14 +181,14 @@ def ExperimentThree():
         torch.nn.ReLU(),
 
         torch.nn.MaxPool2d(kernel_size=(2, 4)),
-        torch.nn.Dropout2d(p=0.2),
+        torch.nn.Dropout2d(p=0.1),
 
         torch.nn.Conv2d(in_channels=32, out_channels=64, kernel_size=(3, 3), stride=1, padding=1),
         torch.nn.ReLU(),
 
         torch.nn.MaxPool2d(kernel_size=(2, 4)),
 
-        torch.nn.Conv2d(in_channels=64, out_channels=64, kernel_size=(34, 28), stride=1, padding=1),
+        torch.nn.Conv2d(in_channels=64, out_channels=64, kernel_size=(34, REDUCTION_KERNEL_SIZE ), stride=1, padding=1),
         torch.nn.ReLU(),
 
         torch.nn.Conv2d(in_channels=64, out_channels=8, kernel_size=(3, 3), stride=1, padding=1),
@@ -192,7 +199,7 @@ def ExperimentThree():
     loss = torch.nn.CrossEntropyLoss()
     optimizer = torch.optim.SGD(model.parameters(), lr=0.01, momentum=0.9)
     # Make 10 passes over the training data, each time using batch_size samples to compute gradient
-    num_epoch = 10
+    num_epoch = 20
     batch_size = 80 # batch size 25
     model.train()
     for epoch in range(num_epoch):
@@ -211,21 +218,18 @@ def ExperimentThree():
     model.eval()
 
     accuracy = Accuracy()
-    predictions = model(train_x_torch)
     y_predictions = []
-    for prediction in predictions:
+    for prediction in model(train_x_torch[:300]):
         values, indices = prediction.max(0)
         y_predictions.append(indices)
 
 
     y_predictions = torch.from_numpy(np.array(y_predictions))
-    y_values = torch.from_numpy(TargetValues(train_y_torch))
+    y_values = torch.from_numpy(TargetValues(train_y_torch[:300]))
     print("Training Accuracy: " + str(accuracy(y_predictions, y_values)))
 
-    accuracy = Accuracy()
-    predictions = model(test_x_torch)
     y_predictions = []
-    for prediction in predictions:
+    for prediction in model(test_x_torch):
         values, indices = prediction.max(0)
         y_predictions.append(indices)
 
