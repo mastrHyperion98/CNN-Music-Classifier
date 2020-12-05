@@ -2,6 +2,7 @@
 # The csv file will be fed into the CNN and it will be used to speed up testing with the neural network.
 # Reading all the music files and extracting the data is expected to take a long time.
 import csv
+import random
 import os
 import librosa
 import numpy as np
@@ -48,14 +49,14 @@ def FetchDataFeatures():
 
 def FetchGraphData():
     numRows = 128
-    numCols = 431
+    numCols = 1292
     header = ''
     for i in range(1, numRows*numCols+1):
         header += f' db{i}'
     header += ' label'
     header = header.split()
 
-    file = open('dataGraph.csv', 'w', newline='')
+    file = open('dataGraphf.csv', 'w', newline='')
     with file:
         writer = csv.writer(file)
         writer.writerow(header)
@@ -66,12 +67,13 @@ def FetchGraphData():
         genre_dir = dataset_dir+"/"+genre
         if os.path.isdir(genre_dir):
             filenames = os.listdir(genre_dir)
-            counter = 20
+            counter = 500
             for filename in filenames:
                 if ".ogg" in filename:
                     audio_path = genre_dir+'/'+filename
-                    print('Audio path: ' + audio_path)
-                    x, sr = librosa.load(audio_path, mono=True, duration=10, offset=15)
+                    offset_int = random.randint(30, 120)
+                    print(counter, ' Audio path: ' + audio_path + ', offset: ' + str(offset_int))
+                    x, sr = librosa.load(audio_path, mono=True,  duration=30, offset=offset_int)
                     mels_spectrogram = librosa.feature.melspectrogram(x, sr, n_mels=128)
                     Xdb = librosa.power_to_db(mels_spectrogram, ref=np.max)
                     features = np.reshape(Xdb, (numCols*numRows,))
@@ -80,13 +82,13 @@ def FetchGraphData():
                         to_append += f' {feature}'
 
                     to_append += f' {genre}'
-                    file = open('dataGraph.csv', 'a', newline='')
+                    file = open('dataGraphf.csv', 'a', newline='')
                     with file:
                         writer = csv.writer(file)
                         writer.writerow(to_append.split())
                         counter = counter - 1
-                    if counter == 0:
-                        break
+                    # if counter == 0:
+                    #     break
             print(f'{genre} has been completed')
 
 

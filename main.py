@@ -38,9 +38,9 @@ def plot_channels(x, **kwargs):
     """Plot each channel in z as an image, where z is in (C,H,W) format."""
     vmax = max(-x.min(), x.max())  # Range of values
     for i, channel in enumerate(x):
-        plt.figure(**kwargs);
-        plt.imshow(channel.detach(), vmin=-vmax, vmax=vmax, cmap='gray');
-        plt.colorbar();
+        plt.figure(**kwargs)
+        plt.imshow(channel.detach(), vmin=-vmax, vmax=vmax, cmap='gray')
+        plt.colorbar()
         plt.title("channel %d" % i)
         plt.show()
 
@@ -52,16 +52,18 @@ def TargetValues(torch):
         y_values.append(values)
     return np.array(y_values)
 
+
 def ExperimentOne(X, y):
-    #Experiment One and two uses our extrapolated features to try and create a fast and efficient trainer.
-    #Here we will be using a RandomForestClassifier of max_depth 20 and 200 estimators to estimate our resuts.
+    # Experiment One and two uses our extrapolated features to try and create a fast and efficient trainer.
+    # Here we will be using a RandomForestClassifier of max_depth 20 and 200 estimators to estimate our resuts.
     print("#########\tExperiment One: RandomForest Classifier\t#########")
     max_depth = 26
     n_estimators = 100
     # load our data
     X, y = LoadData('data.csv')
-    train_x, val_x, train_y, val_y=  train_test_split(X,y, test_size=0.1)
-    clf = RandomForestClassifier(max_depth=max_depth, bootstrap=True, n_estimators=n_estimators, random_state=0)
+    train_x, val_x, train_y, val_y = train_test_split(X, y, test_size=0.1)
+    clf = RandomForestClassifier(max_depth=max_depth, bootstrap=True,
+                                 n_estimators=n_estimators, random_state=0)
     clf.fit(train_x, train_y)
     print("Shape of training data: " + str(train_x.shape))
     print("Training Accuracy: " + str(clf.score(train_x, train_y)*100))
@@ -83,7 +85,7 @@ def ExperimentOne(X, y):
 
 
 def ExperimentTwo(X, y):
-    #Experiment two is very similar to Experiment One but using a Neural Network instead
+    # Experiment two is very similar to Experiment One but using a Neural Network instead
     print("#########\tExperiment Two: Neural Network Classifier\t#########")
     # Your code here. Aim for 2-4 lines.
     #X, y = LoadData('data.csv')
@@ -93,7 +95,7 @@ def ExperimentTwo(X, y):
     X_test_torch = torch.from_numpy(val_x).float()
     y_test_torch = torch.from_numpy(val_y).long()
 
-    torch.manual_seed(0) # Ensure model weights initialized with same random numbers
+    torch.manual_seed(0)  # Ensure model weights initialized with same random numbers
 
     # Create an object that holds a sequence of layers and activation functions
     model = torch.nn.Sequential(
@@ -147,19 +149,21 @@ def ExperimentTwo(X, y):
 
     print("Training Accuracy: " + str(accuracy(y_predictions, y_train_torch)))
 
+
 def ExperimentThree():
-    #Using CNN and spectrogram images directly for classification
-    X, y = LoadData('dataGraphFull.csv')
+    # Using CNN and spectrogram images directly for classification
+    X, y = LoadData('dataGraphf.csv')
+    print("#########\tExperiment Three: Convolutional Neural Network Classifier\t#########")
     # Split into training and testing data
     train_x, val_x, train_y, val_y = train_test_split(X, y, test_size=0.2)
     del X
     del y
     # For the dataGraph there is a single channel'
-    TRACK_LENGTH = 15
+    TRACK_LENGTH = 30
     N = 128
 
     M = math.ceil(646/15 * TRACK_LENGTH)
-    REDUCTION_KERNEL_SIZE = math.ceil(42/646 * M)
+    REDUCTION_KERNEL_SIZE = math.ceil(42/646 * M)  # 84
     train_x = train_x.reshape(train_x.shape[0], N, M)
     val_x = val_x.reshape(val_x.shape[0], N, M)
     train_x_torch = torch.from_numpy(train_x).float()
@@ -167,17 +171,16 @@ def ExperimentThree():
     test_x_torch = torch.from_numpy(val_x).float()[:, None, :, :]
 
     # Transform/Reshape our targets
-    #train_y = FeatureExtractor.TransformTarget(train_y, 1,1) # output shape of form [Size, 1, 1]
-    #val_y = FeatureExtractor.TransformTarget(val_y, 1,1) # output shape of form [Size, 1, 1]
+    # train_y = FeatureExtractor.TransformTarget(train_y, 1,1) # output shape of form [Size, 1, 1]
+    # val_y = FeatureExtractor.TransformTarget(val_y, 1,1) # output shape of form [Size, 1, 1]
     train_y_torch = torch.from_numpy(train_y).long()
     test_y_torch = torch.from_numpy(val_y).long()
-
 
     torch.manual_seed(0)  # Ensure model weights initialized with same random numbers
 
     # Create an object that holds a sequence of layers and activation functions
     model = torch.nn.Sequential(
-        torch.nn.Conv2d(in_channels=1, out_channels=32, kernel_size=(3,3), stride=1, padding=1),
+        torch.nn.Conv2d(in_channels=1, out_channels=32, kernel_size=(3, 3), stride=1, padding=1),
         torch.nn.ReLU(),
 
         torch.nn.MaxPool2d(kernel_size=(2, 4)),
@@ -188,7 +191,8 @@ def ExperimentThree():
 
         torch.nn.MaxPool2d(kernel_size=(2, 4)),
 
-        torch.nn.Conv2d(in_channels=64, out_channels=64, kernel_size=(34, REDUCTION_KERNEL_SIZE ), stride=1, padding=1),
+        torch.nn.Conv2d(in_channels=64, out_channels=64, kernel_size=(
+            34, 82), stride=1, padding=1),
         torch.nn.ReLU(),
 
         torch.nn.Conv2d(in_channels=64, out_channels=8, kernel_size=(3, 3), stride=1, padding=1),
@@ -199,8 +203,8 @@ def ExperimentThree():
     loss = torch.nn.CrossEntropyLoss()
     optimizer = torch.optim.SGD(model.parameters(), lr=0.01, momentum=0.9)
     # Make 10 passes over the training data, each time using batch_size samples to compute gradient
-    num_epoch = 20
-    batch_size = 80 # batch size 25
+    num_epoch = 1000
+    batch_size = 80  # batch size 25
     model.train()
     for epoch in range(num_epoch):
         for i in range(0, len(train_x), batch_size):
@@ -223,7 +227,6 @@ def ExperimentThree():
         values, indices = prediction.max(0)
         y_predictions.append(indices)
 
-
     y_predictions = torch.from_numpy(np.array(y_predictions))
     y_values = torch.from_numpy(TargetValues(train_y_torch[:300]))
     print("Training Accuracy: " + str(accuracy(y_predictions, y_values)))
@@ -237,12 +240,10 @@ def ExperimentThree():
     y_values = torch.from_numpy(TargetValues(test_y_torch))
     print("Testing Accuracy: " + str(accuracy(y_predictions, y_values)))
 
-def main():
-   ExperimentThree()
 
+def main():
+    ExperimentThree()
 
 
 if __name__ == '__main__':
     main()
-
-
