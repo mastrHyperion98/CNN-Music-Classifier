@@ -94,9 +94,7 @@ def FetchGraphData():
 
                     for feature in features:
                         to_append += f' {feature}'
-                    genre_to_int = {'Classical': 0, 'Country': 1, 'Dance': 2, 'HipHop': 3, 'Jazz': 4,
-                                    'Pop': 5, 'R&B': 6, 'Rock': 7}
-                    to_append += f' {genre_to_int[genre]}'
+                    to_append += f' {genre}'
                     file = open(csv_name, 'a', newline='')
                     with file:
                         writer = csv.writer(file)
