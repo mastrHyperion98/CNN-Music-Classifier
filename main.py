@@ -7,8 +7,8 @@ import torch
 from torch.autograd import Variable
 from torch.nn import Linear, ReLU, CrossEntropyLoss, Sequential, Conv2d, MaxPool2d, Module, Softmax, BatchNorm2d, Dropout
 from torch.optim import Adam, SGD
-from pytorch_lightning.metrics import Accuracy
-from pytorch_lightning.metrics.functional.classification import confusion_matrix
+from pytorch_lightning.metrics import Accuracy, Precision, Recall, F1, MeanSquaredError, MeanSquaredLogError
+from pytorch_lightning.metrics.functional.classification import confusion_matrix, auroc, precision_recall_curve
 from sklearn.preprocessing import LabelEncoder
 from sklearn.model_selection import train_test_split
 from torch.autograd import Variable
@@ -64,6 +64,33 @@ def plot_confusion_matrix(pred, target, label, title, outputFile):
     for (i, j), z in np.ndenumerate(matrix):
         plt.text(j, i, '{:0.1f}'.format(z), ha='center', va='center')
     plt.colorbar()
+    plt.savefig(outputFile)
+    plt.show()
+
+
+def output_analytics(predict, target,filename):
+    # Define the objects we will need
+    acc = Accuracy()
+    prec = Precision(num_classes=8)
+    rec = Recall(num_classes=8)
+    f1 = F1(num_classes=8)
+    mse = MeanSquaredError()
+    msle = MeanSquaredLogError()
+    accuracy = acc(predict, target)
+    precision = prec(predict, target)
+    recall = rec(predict, target)
+    f1_score = f1(predict, target)
+    means_squared_error = mse(predict, target)
+    means_squared_log_error = msle(predict, target)
+    roc_auc = auroc(predict, target)
+
+
+def plot_precision_recall_curve(pred, target, outputFile):
+    precision, recall, thresholds = precision_recall_curve(pred, target)
+    plt.plot(recall,precision)
+    plt.title("CNN Recall vs Precision")
+    plt.xlabel("Recall (R)")
+    plt.ylabel("Precision (P)")
     plt.savefig(outputFile)
     plt.show()
 
@@ -184,8 +211,6 @@ def experiment_three():
     test_x_torch = torch.from_numpy(val_x).float()[:, None, :, :]
 
     # Transform/Reshape our targets
-    #train_y = FeatureExtractor.TransformTarget(train_y, 1,1) # output shape of form [Size, 1, 1]
-    #val_y = FeatureExtractor.TransformTarget(val_y, 1,1) # output shape of form [Size, 1, 1]
     train_y_torch = torch.from_numpy(train_y).long()
     test_y_torch = torch.from_numpy(val_y).long()
 
@@ -249,15 +274,16 @@ def experiment_three():
     y_predictions = torch.from_numpy(np.array(y_predictions))
     print("Training Accuracy: " + str(accuracy(y_predictions, train_y_torch[:300])))
 
-    y_predictions = []
+    y_test_predictions = []
     for prediction in model(test_x_torch):
         values, indices = prediction.max(0)
-        y_predictions.append(indices)
+        y_test_predictions.append(indices)
 
-    y_predictions = torch.from_numpy(np.array(y_predictions))
-    print("Testing Accuracy: " + str(accuracy(y_predictions, test_y_torch)))
+    y_test_predictions = torch.from_numpy(np.array(y_test_predictions))
+    print("Testing Accuracy: " + str(accuracy(y_test_predictions, test_y_torch)))
     plot_loss(epoch_list, loss_list, "CNN of Spectrogram Loss vs Epoch ("+f'{train_x.shape[0]} samples)','LossPltCNN.png')
-    plot_confusion_matrix(y_predictions, test_y_torch, labels, "CNN Confusion Matrix ("+f'{val_x.shape[0]} test samples)', 'confusionMatrixCNN.png')
+    plot_confusion_matrix(y_test_predictions, test_y_torch, labels, "CNN Confusion Matrix ("+f'{val_x.shape[0]} test samples)', 'confusionMatrixCNN.png')
+    plot_precision_recall_curve(y_test_predictions, test_y_torch, "RP_GraphCNN.png")
 
 
 def main():
