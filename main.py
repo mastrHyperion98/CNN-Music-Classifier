@@ -43,6 +43,13 @@ def plot_channels(x, **kwargs):
         plt.show()
 
 
+def TargetValues(torch):
+    y_values = []
+    for prediction in torch:
+        values, indices = prediction.max(0)
+        y_values.append(values)
+    return np.array(y_values)
+
 def ExperimentOne(X, y):
     #Experiment One and two uses our extrapolated features to try and create a fast and efficient trainer.
     #Here we will be using a RandomForestClassifier of max_depth 20 and 200 estimators to estimate our resuts.
@@ -142,49 +149,70 @@ def ExperimentThree():
     #Using CNN and spectrogram images directly for classification
     X, y = LoadData('dataGraph.csv')
     # Split into training and testing data
-    train_x, val_x, train_y, val_y = train_test_split(X, y, test_size=0.1)
+    train_x, val_x, train_y, val_y = train_test_split(X, y, test_size=0.2)
     # For the dataGraph there is a single channel'
     N = 128
     M = 431
     train_x = train_x.reshape(train_x.shape[0], N, M)
+    val_x = val_x.reshape(val_x.shape[0], N, M)
     train_x_torch = torch.from_numpy(train_x).float()
     train_x_torch = train_x_torch[:, None, :, :]
-    #TO-DO: Reshape torch to be 3D and match form (train_x.shape[0],N,M) where each index of N and M are the target values
-    train_y = FeatureExtractor.TransformTarget(train_y, 1,1)
+    test_x_torch = torch.from_numpy(val_x).float()[:, None, :, :]
+
+    # Transform/Reshape our targets
+    train_y = FeatureExtractor.TransformTarget(train_y, 1,1) # output shape of form [Size, 1, 1]
+    val_y = FeatureExtractor.TransformTarget(val_y, 1,1) # output shape of form [Size, 1, 1]
     train_y_torch = torch.from_numpy(train_y).long()
+    test_y_torch = torch.from_numpy(val_y).long()
+
 
     torch.manual_seed(0)  # Ensure model weights initialized with same random numbers
 
     # Create an object that holds a sequence of layers and activation functions
     model = torch.nn.Sequential(
-        torch.nn.Conv2d(in_channels=1, out_channels=16, kernel_size=(3,3), stride=1, padding=1),
+        torch.nn.Conv2d(in_channels=1, out_channels=32, kernel_size=(3,3), stride=1, padding=1),
         torch.nn.ReLU(),
-        torch.nn.Dropout2d(p=0.1),
-        torch.nn.MaxPool2d(kernel_size=(2,4)),
-        torch.nn.Conv2d(in_channels=16, out_channels=32, kernel_size=(3, 3), stride=1, padding=1),
+
+        torch.nn.Conv2d(in_channels=32, out_channels=32, kernel_size=(3, 3), stride=1, padding=1),
         torch.nn.ReLU(),
-        torch.nn.Dropout2d(p=0.1),
-        torch.nn.MaxPool2d(kernel_size=(2, 4)),
-        torch.nn.Conv2d(in_channels=32, out_channels=64, kernel_size=(34, 28), stride=1, padding=1),
+
+        torch.nn.MaxPool2d(kernel_size=(2, 2)),
         torch.nn.ReLU(),
-        torch.nn.Dropout2d(p=0.1),
-        torch.nn.Conv2d(in_channels=64, out_channels=8, kernel_size=(3, 3), stride=1, padding=1),
-        #torch.nn.Softmax2d(),
+        torch.nn.Dropout2d(p=0.5),
+
+        torch.nn.Conv2d(in_channels=32, out_channels=64, kernel_size=(3, 3), stride=1, padding=1),
+        torch.nn.ReLU(),
+
+        torch.nn.Conv2d(in_channels=64, out_channels=64, kernel_size=(3, 3), stride=1, padding=1),
+        torch.nn.ReLU(),
+
+        torch.nn.MaxPool2d(kernel_size=(2, 2)),
+        torch.nn.ReLU(),
+        torch.nn.Dropout2d(p=0.5),
+
+        torch.nn.Conv2d(in_channels=64, out_channels=128, kernel_size=(3, 3), stride=1, padding=1),
+        torch.nn.ReLU(),
+
+        torch.nn.Conv2d(in_channels=128, out_channels=128, kernel_size=(3, 3), stride=1, padding=1),
+        torch.nn.ReLU(),
+        torch.nn.Flatten()
+
+        torch.nn.Conv2d(in_channels=128, out_channels=8, kernel_size=(18, 55), stride=1, padding=1),
+        torch.nn.Linear(1,1)
     )
 
     # Create an object that can compute "negative log likelihood of a softmax"
     loss = torch.nn.CrossEntropyLoss()
     optimizer = torch.optim.SGD(model.parameters(), lr=0.01, momentum=0.9)
     # Make 10 passes over the training data, each time using batch_size samples to compute gradient
-    num_epoch = 100
-    batch_size = 30 # batch size 25
+    num_epoch = 10
+    batch_size = 20 # batch size 25
     model.train()
     for epoch in range(num_epoch):
         for i in range(0, len(train_x), batch_size):
             X = train_x_torch[i:i + batch_size]  # Slice out a mini-batch of features
             y = train_y_torch[i:i + batch_size]  # Slice out a mini-batch of targets\
             y_pred = model(X)  # Make predictions (final-layer activations)
-            print(y_pred.shape)
             l = loss(y_pred, y)  # Compute loss with respect to predictions
 
             model.zero_grad()  # Reset all gradient accumulators to zero (PyTorch thing)
@@ -193,7 +221,19 @@ def ExperimentThree():
 
         print("Epoch %d final minibatch had loss %.4f" % (epoch + 1, l.item()))
 
+    model.eval()
 
+    accuracy = Accuracy()
+    predictions = model(train_x_torch)
+    y_predictions = []
+    for prediction in predictions:
+        values, indices = prediction.max(0)
+        y_predictions.append(indices)
+
+
+    y_predictions = torch.from_numpy(np.array(y_predictions))
+    y_values = torch.from_numpy(TargetValues(train_y_torch))
+    print("Training Accuracy: " + str(accuracy(y_predictions, y_values)))
 
 def main():
    ExperimentThree()
