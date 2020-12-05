@@ -44,11 +44,12 @@ MANIFEST
 pip-log.txt
 pip-delete-this-directory.txt
 
+.ignore
 .idea
 .vscode
+*.csv
 .DS_Store
 
 dataset
-datasett
 samples/
 

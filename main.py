@@ -164,8 +164,28 @@ def ExperimentTwo():
     print("Training Accuracy: " + str(accuracy(y_predictions, y_train_torch)))
 
 
+def test_model(X_test, y_test, model):
+    correct = 0
+    total = 0
+    model.eval()
+    with torch.no_grad():
+        size = X_test.shape[0]
+        print('size: ', size)
+        for i in range(size):
+            image = X_test[i:i+1, :, :, :]
+            label = y_test[i]
+            output = model(image)
+            print('label: ', label.shape, ', output:', output.shape)
+            _, predicted = torch.max(output.data, 1)
+            total += 1
+            correct += (predicted == label).sum().item()
+
+    print('corr: ', correct, ', total:', total)
+    return 100 * correct / total
+
+
 def ExperimentThree():
-    x_data, y_data = LoadData('dataGraph-50.csv')
+    x_data, y_data = LoadData('dataGraph-10r.csv')
     # Experiment three Using CNN and spectrogram images directly for classification
     print("#########\tExperiment Three: Convolutional Neural Network Classifier\t#########")
 
@@ -174,33 +194,37 @@ def ExperimentThree():
     # For the dataGraph there is a single channel'
     N = 128
     M = 1292
-    train_x = train_x.reshape(train_x.shape[0], N, M)
+    x_train_torch = train_x.reshape(train_x.shape[0], N, M)
     train_x_torch = torch.from_numpy(train_x).float()
     train_x_torch = train_x_torch[:, None, :, :]
     # TO-DO: Reshape torch to be 3D and match form (train_x.shape[0],N,M) where each index of N and M are the target values
-    train_y = FeatureExtractor.TransformTarget(train_y, N, M)
-    train_y_torch = torch.from_numpy(train_y).long()
+    y_train_torch = torch.from_numpy(train_y).long()
 
     torch.manual_seed(0)  # Ensure model weights initialized with same random numbers
 
+    print('train_x: ', x_train_torch.shape, ', train_y:', y_train_torch.shape)
     # Create an object that holds a sequence of layers and activation functions
     model = torch.nn.Sequential(
-        torch.nn.Conv2d(in_channels=1, out_channels=16, kernel_size=(3, 3), stride=1, padding=1),
+        torch.nn.Conv2d(in_channels=1, out_channels=6, kernel_size=5),
+        torch.nn.Conv2d(in_channels=6, out_channels=12, kernel_size=5),
+        torch.nn.Linear(12*4*4, 120),
+        torch.nn.Linear(120, 60),
+        torch.nn.Linear(60, 8),
     )
 
     # Create an object that can compute "negative log likelihood of a softmax"
     loss = torch.nn.CrossEntropyLoss()
     optimizer = torch.optim.SGD(model.parameters(), lr=0.01, momentum=0.9)
     # Make 10 passes over the training data, each time using batch_size samples to compute gradient
-    num_epoch = 10
-    batch_size = 25  # batch size 25
+    num_epoch = 2
+    batch_size = 4  # batch size 25
     model.train()
     for epoch in range(num_epoch):
         for i in range(0, len(train_x), batch_size):
-            X = train_x_torch[i:i + batch_size]  # Slice out a mini-batch of features
-            y = train_y_torch[i:i + batch_size]  # Slice out a mini-batch of targets
-            y_pred = model(X)  # Make predictions (final-layer activations)
-            l = loss(y_pred, y)  # Compute loss with respect to predictions
+            x_sample = x_train_torch[i:i + batch_size]  # Slice out a mini-batch of features
+            y_sample = y_train_torch[i:i + batch_size]  # Slice out a mini-batch of targets
+            y_pred = model(x_sample)  # Make predictions (final-layer activations)
+            l = loss(y_pred, y_sample)  # Compute loss with respect to predictions
 
             model.zero_grad()  # Reset all gradient accumulators to zero (PyTorch thing)
             l.backward()  # Compute gradient of loss wrt all parameters (backprop!)
@@ -208,32 +232,12 @@ def ExperimentThree():
 
         print("Epoch %d final minibatch had loss %.4f" % (epoch + 1, l.item()))
 
-    test_x = test_x.reshape(test_x.shape[0], N, M)
-    test_y = FeatureExtractor.TransformTarget(test_y, N, M)
     x_test_torch = torch.from_numpy(test_x).float()
-    x_test_torch = x_test_torch[:, None, :, :]
     y_test_torch = torch.from_numpy(test_y).long()
     model.eval()
-    accuracy = Accuracy()
-    predictions = model(x_test_torch)
-    y_predictions = []
-    for prediction in predictions:
-        values, indices = prediction.max(0)
-        y_predictions.append(indices)
 
-    y_predictions = torch.from_numpy(np.array(y_predictions))
-
-    print("Testing Accuracy: " + str(accuracy(y_predictions, y_test_torch)))
-
-    predictions = model(x_train_torch)
-    y_predictions = []
-    for prediction in predictions:
-        values, indices = prediction.max(0)
-        y_predictions.append(indices)
-
-    y_predictions = torch.from_numpy(np.array(y_predictions))
-
-    print("Training Accuracy: " + str(accuracy(y_predictions, y_train_torch)))
+    print("Testing Accuracy: " + str(test_model(x_test_torch.clone().detach().requires_grad_(False),
+                                                y_test_torch.clone().detach().requires_grad_(False), model)))
 
 
 def main():

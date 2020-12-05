@@ -1,7 +1,9 @@
-# DataExtraction.py is the script used to read all our music files and extract the required information into a csv file
-# The csv file will be fed into the CNN and it will be used to speed up testing with the neural network.
-# Reading all the music files and extracting the data is expected to take a long time.
-
+"""
+data_extraction.py is the script used to read all our music files and extract the
+required information into a csv file. The csv file will be fed into the CNN and it
+will be used to speed up testing with the neural network.
+Reading all the music files and extracting the data is expected to take a long time.
+"""
 import csv
 import random
 import os
@@ -55,11 +57,13 @@ def FetchGraphData():
     num_cols = 1292
     header = ''
     for i in range(1, num_rows*num_cols+1):
-        header += f' db{i}'
+        header += f' feature {i}'
     header += ' label'
     header = header.split()
 
-    file = open('dataGraph-50.csv', 'w', newline='')
+    csv_name = 'dataGraph-10r.csv'
+    file = open(csv_name, 'w', newline='')
+
     with file:
         writer = csv.writer(file)
         writer.writerow(header)
@@ -71,7 +75,7 @@ def FetchGraphData():
         if os.path.isdir(genre_dir):
             filenames = os.listdir(genre_dir)
             index = 0
-            counter = 50
+            counter = 10
             for filename in filenames:
                 if ".ogg" in filename:
                     index += 1
@@ -87,11 +91,13 @@ def FetchGraphData():
                     x_db = librosa.power_to_db(mels_spectrogram, ref=np.max)
                     features = np.reshape(x_db, (num_cols*num_rows,))
                     to_append = ''
+
                     for feature in features:
                         to_append += f' {feature}'
-
-                    to_append += f' {genre}'
-                    file = open('dataGraph.csv', 'a', newline='')
+                    genre_to_int = {'Classical': 0, 'Country': 1, 'Dance': 2, 'HipHop': 3, 'Jazz': 4,
+                                    'Pop': 5, 'R&B': 6, 'Rock': 7}
+                    to_append += f' {genre_to_int[genre]}'
+                    file = open(csv_name, 'a', newline='')
                     with file:
                         writer = csv.writer(file)
                         writer.writerow(to_append.split())
