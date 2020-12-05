@@ -1,3 +1,5 @@
+import math
+
 import librosa
 import sklearn.neural_network
 
@@ -153,8 +155,11 @@ def ExperimentThree():
     del X
     del y
     # For the dataGraph there is a single channel'
+    TRACK_LENGTH = 15
     N = 128
-    M = 646
+
+    M = math.ceil(646/15 * TRACK_LENGTH)
+    REDUCTION_KERNEL_SIZE = math.ceil(42/646 * M)
     train_x = train_x.reshape(train_x.shape[0], N, M)
     val_x = val_x.reshape(val_x.shape[0], N, M)
     train_x_torch = torch.from_numpy(train_x).float()
@@ -183,7 +188,7 @@ def ExperimentThree():
 
         torch.nn.MaxPool2d(kernel_size=(2, 4)),
 
-        torch.nn.Conv2d(in_channels=64, out_channels=64, kernel_size=(34, 42), stride=1, padding=1),
+        torch.nn.Conv2d(in_channels=64, out_channels=64, kernel_size=(34, REDUCTION_KERNEL_SIZE ), stride=1, padding=1),
         torch.nn.ReLU(),
 
         torch.nn.Conv2d(in_channels=64, out_channels=8, kernel_size=(3, 3), stride=1, padding=1),
