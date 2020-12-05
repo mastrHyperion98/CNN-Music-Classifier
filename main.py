@@ -1,3 +1,4 @@
+import csv
 import math
 
 import librosa
@@ -33,17 +34,7 @@ def load_data(filename, labelEncoder):
     return X, y
 
 
-def plot_channels(x, **kwargs):
-    """Plot each channel in z as an image, where z is in (C,H,W) format."""
-    vmax = max(-x.min(), x.max())  # Range of values
-    for i, channel in enumerate(x):
-        plt.figure(**kwargs);
-        plt.imshow(channel.detach(), vmin=-vmax, vmax=vmax, cmap='gray');
-        plt.colorbar();
-        plt.title("channel %d" % i)
-        plt.show()
-
-
+# Plot the epoch vs loss
 def plot_loss(X, y, title, outputFile):
     # We will print stuff here
     plt.plot(X, y)
@@ -54,6 +45,7 @@ def plot_loss(X, y, title, outputFile):
     plt.show()
 
 
+# Function to get and plot the confusion matrix
 def plot_confusion_matrix(pred, target, label, title, outputFile):
     matrix = confusion_matrix(pred, target, normalize=True)
     plt.figure(figsize=(150,150))
@@ -68,8 +60,28 @@ def plot_confusion_matrix(pred, target, label, title, outputFile):
     plt.show()
 
 
-def output_analytics(predict, target,filename):
+def output_analytics(predictions, target, label, filename):
     # Define the objects we will need
+    header = 'Accuracy Precision Recall f1_score means_squared_error'
+    header = header.split()
+    file = open(f'{filename}.csv', 'w', newline='')
+    with file:
+        writer = csv.writer(file)
+        writer.writerow(header)
+
+    # Get the indices of the best predictions
+    predict = []
+    for prediction in predictions:
+        values, indices = prediction.max(0)
+        predict.append(indices)
+
+    #turn it into a torch
+    predict = torch.from_numpy(np.array(predict))
+
+    plot_confusion_matrix(predict, target, label,
+                          "CNN Confusion Matrix (" + f'{predict.shape[0]} test samples)', filename+'_confusionMatrix.png')
+    plot_precision_recall_curve(predict, target, "Recall vs Precision", filename+"_RP_Graph.png")
+
     acc = Accuracy()
     prec = Precision(num_classes=8)
     rec = Recall(num_classes=8)
@@ -81,21 +93,27 @@ def output_analytics(predict, target,filename):
     recall = rec(predict, target)
     f1_score = f1(predict, target)
     means_squared_error = mse(predict, target)
-    means_squared_log_error = msle(predict, target)
-    roc_auc = auroc(predict, target)
+
+    # save in a list and write to a csv file
+    list = f'{accuracy} {precision} {recall} {f1_score} {means_squared_error}'
+    file = open(f'{filename}.csv', 'a', newline='')
+    with file:
+        writer = csv.writer(file)
+        writer.writerow(list.split())
+    file.close()
 
 
-def plot_precision_recall_curve(pred, target, outputFile):
+def plot_precision_recall_curve(pred, target, title, outputFile):
     precision, recall, thresholds = precision_recall_curve(pred, target)
     plt.plot(recall,precision)
-    plt.title("CNN Recall vs Precision")
+    plt.title(title)
     plt.xlabel("Recall (R)")
     plt.ylabel("Precision (P)")
     plt.savefig(outputFile)
     plt.show()
 
 
-def experiment_one(X, y):
+def experiment_one(X, y, labels):
     #Experiment One and two uses our extrapolated features to try and create a fast and efficient trainer.
     #Here we will be using a RandomForestClassifier of max_depth 20 and 200 estimators to estimate our resuts.
     print("#########\tExperiment One: RandomForest Classifier\t#########")
@@ -103,8 +121,11 @@ def experiment_one(X, y):
     n_estimators = 100
     # load our data
     train_x, val_x, train_y, val_y=  train_test_split(X,y, test_size=0.1)
+    # Create a RandomForestClassifier
     clf = RandomForestClassifier(max_depth=max_depth, bootstrap=True, n_estimators=n_estimators, random_state=0)
+    # Fit the data
     clf.fit(train_x, train_y)
+    # Display accuracy of the model
     print("Shape of training data: " + str(train_x.shape))
     print("Training Accuracy: " + str(clf.score(train_x, train_y)*100))
     print("Testing Accuracy: " + str(clf.score(val_x, val_y)*100))
@@ -120,11 +141,11 @@ def experiment_one(X, y):
 
         print(title)
         print(disp.confusion_matrix)
-
+    plt.savefig('DecisionTree_ConfusionMatrix.png')
     plt.show()
 
 
-def experiment_two(X, y):
+def experiment_two(X, y, labels):
     #Experiment two is very similar to Experiment One but using a Neural Network instead
     print("#########\tExperiment Two: Neural Network Classifier\t#########")
     # Your code here. Aim for 2-4 lines.
@@ -139,11 +160,11 @@ def experiment_two(X, y):
 
     # Create an object that holds a sequence of layers and activation functions
     model = torch.nn.Sequential(
-        torch.nn.Linear(26, 20),   # Applies Wx+b from 784 dimensions down to 10
+        torch.nn.Linear(26, 20),   # Applies Wx+b from 26 dimensions down to 20
         torch.nn.ReLU(),
-        torch.nn.Linear(20, 14),  # Applies Wx+b from 784 dimensions down to 10
+        torch.nn.Linear(20, 14),  # Applies Wx+b from 20 dimensions down to 14
         torch.nn.ReLU(),
-        torch.nn.Linear(14, 8),  # Applies Wx+b from 784 dimensions down to 10
+        torch.nn.Linear(14, 8),  # Applies Wx+b from 14 dimensions down to 8
     )
 
     # Create an object that can compute "negative log likelihood of a softmax"
@@ -167,27 +188,11 @@ def experiment_two(X, y):
 
         print("Epoch %d final minibatch had loss %.4f" % (epoch + 1, l.item()))
 
+    # Set model in evaluation mode
     model.eval()
-    accuracy = Accuracy()
-    predictions = model(X_test_torch)
-    y_predictions = []
-    for prediction in predictions:
-        values, indices = prediction.max(0)
-        y_predictions.append(indices)
+    output_analytics(model(X_train_torch), y_train_torch, labels, 'FNN_Train_Analytics')
+    output_analytics(model(X_test_torch), y_test_torch, labels, 'FNN_Test_Analytics')
 
-    y_predictions = torch.from_numpy(np.array(y_predictions))
-
-    print("Testing Accuracy: " + str(accuracy(y_predictions, y_test_torch)))
-
-    predictions = model(X_train_torch)
-    y_predictions = []
-    for prediction in predictions:
-        values, indices = prediction.max(0)
-        y_predictions.append(indices)
-
-    y_predictions = torch.from_numpy(np.array(y_predictions))
-
-    print("Training Accuracy: " + str(accuracy(y_predictions, y_train_torch)))
 
 def experiment_three():
     #Using CNN and spectrogram images directly for classification
@@ -224,17 +229,18 @@ def experiment_three():
 
         torch.nn.MaxPool2d(kernel_size=(2, 4)),
         torch.nn.Dropout2d(p=0.1),
-
+        torch.nn.ReLU(),
 
         torch.nn.Conv2d(in_channels=32, out_channels=64, kernel_size=(3, 3), stride=1, padding=1),
         torch.nn.ReLU(),
 
         torch.nn.MaxPool2d(kernel_size=(2, 4)),
-
-        torch.nn.Conv2d(in_channels=64, out_channels=128, kernel_size=(34, REDUCTION_KERNEL_SIZE ), stride=1, padding=1),
         torch.nn.ReLU(),
 
-        torch.nn.Conv2d(in_channels=128, out_channels=8, kernel_size=(3, 3), stride=1, padding=1),
+        torch.nn.Conv2d(in_channels=64, out_channels=64, kernel_size=(34, REDUCTION_KERNEL_SIZE ), stride=1, padding=1),
+        torch.nn.ReLU(),
+
+        torch.nn.Conv2d(in_channels=64, out_channels=8, kernel_size=(3, 3), stride=1, padding=1),
         torch.nn.Flatten(),
     )
 
@@ -242,12 +248,12 @@ def experiment_three():
     loss = torch.nn.CrossEntropyLoss()
     optimizer = torch.optim.SGD(model.parameters(), lr=0.01, momentum=0.9)
     # Make 10 passes over the training data, each time using batch_size samples to compute gradient
-    num_epoch = 15
+    num_epoch = 20
     batch_size = 80 # batch size 25
     model.train()
 
     loss_list = []
-    epoch_list = np.arange(1,16,1, dtype='int64')
+    epoch_list = np.arange(1,21,1, dtype='int64')
     for epoch in range(num_epoch):
         for i in range(0, len(train_x), batch_size):
             X = train_x_torch[i:i + batch_size]  # Slice out a mini-batch of features
@@ -264,26 +270,8 @@ def experiment_three():
 
     model.eval()
 
-    accuracy = Accuracy()
-    y_predictions = []
-    for prediction in model(train_x_torch[:300]):
-        values, indices = prediction.max(0)
-        y_predictions.append(indices)
-
-
-    y_predictions = torch.from_numpy(np.array(y_predictions))
-    print("Training Accuracy: " + str(accuracy(y_predictions, train_y_torch[:300])))
-
-    y_test_predictions = []
-    for prediction in model(test_x_torch):
-        values, indices = prediction.max(0)
-        y_test_predictions.append(indices)
-
-    y_test_predictions = torch.from_numpy(np.array(y_test_predictions))
-    print("Testing Accuracy: " + str(accuracy(y_test_predictions, test_y_torch)))
     plot_loss(epoch_list, loss_list, "CNN of Spectrogram Loss vs Epoch ("+f'{train_x.shape[0]} samples)','LossPltCNN.png')
-    plot_confusion_matrix(y_test_predictions, test_y_torch, labels, "CNN Confusion Matrix ("+f'{val_x.shape[0]} test samples)', 'confusionMatrixCNN.png')
-    plot_precision_recall_curve(y_test_predictions, test_y_torch, "RP_GraphCNN.png")
+    output_analytics(model(test_x_torch), test_y_torch, labels, "CNN_Test_Analytics")
 
 
 def main():
