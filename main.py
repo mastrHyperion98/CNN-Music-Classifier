@@ -160,7 +160,7 @@ def ExperimentThree():
     test_x_torch = torch.from_numpy(val_x).float()[:, None, :, :]
 
     # Transform/Reshape our targets
-    train_y = FeatureExtractor.TransformTarget(train_y, 1,1) # output shape of form [Size, 1, 1]
+    #train_y = FeatureExtractor.TransformTarget(train_y, 1,1) # output shape of form [Size, 1, 1]
     val_y = FeatureExtractor.TransformTarget(val_y, 1,1) # output shape of form [Size, 1, 1]
     train_y_torch = torch.from_numpy(train_y).long()
     test_y_torch = torch.from_numpy(val_y).long()
@@ -177,28 +177,16 @@ def ExperimentThree():
         torch.nn.ReLU(),
 
         torch.nn.MaxPool2d(kernel_size=(2, 2)),
-        torch.nn.ReLU(),
         torch.nn.Dropout2d(p=0.5),
 
         torch.nn.Conv2d(in_channels=32, out_channels=64, kernel_size=(3, 3), stride=1, padding=1),
         torch.nn.ReLU(),
 
-        torch.nn.Conv2d(in_channels=64, out_channels=64, kernel_size=(3, 3), stride=1, padding=1),
+        torch.nn.Conv2d(in_channels=64, out_channels=64, kernel_size=(66, 217), stride=1, padding=1),
         torch.nn.ReLU(),
 
-        torch.nn.MaxPool2d(kernel_size=(2, 2)),
-        torch.nn.ReLU(),
-        torch.nn.Dropout2d(p=0.5),
-
-        torch.nn.Conv2d(in_channels=64, out_channels=128, kernel_size=(3, 3), stride=1, padding=1),
-        torch.nn.ReLU(),
-
-        torch.nn.Conv2d(in_channels=128, out_channels=128, kernel_size=(3, 3), stride=1, padding=1),
-        torch.nn.ReLU(),
+        torch.nn.Conv2d(in_channels=64, out_channels=8, kernel_size=(3, 3), stride=1, padding=1),
         torch.nn.Flatten()
-
-        torch.nn.Conv2d(in_channels=128, out_channels=8, kernel_size=(18, 55), stride=1, padding=1),
-        torch.nn.Linear(1,1)
     )
 
     # Create an object that can compute "negative log likelihood of a softmax"
