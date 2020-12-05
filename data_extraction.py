@@ -1,13 +1,18 @@
-# DataExtraction.py is the script used to read all our music files and extract the required information into a csv file
-# The csv file will be fed into the CNN and it will be used to speed up testing with the neural network.
-# Reading all the music files and extracting the data is expected to take a long time.
+"""
+data_extraction.py is the script used to read all our music files and extract the
+required information into a csv file. The csv file will be fed into the CNN and it
+will be used to speed up testing with the neural network.
+Reading all the music files and extracting the data is expected to take a long time.
+"""
 import csv
 import random
 import os
+import warnings
 import librosa
 import numpy as np
+# import matplotlib.pyplot as plt
 from tools import FeatureExtractor
-import matplotlib.pyplot as plt
+warnings.filterwarnings('ignore')
 
 
 def main():
