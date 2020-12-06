@@ -224,14 +224,14 @@ def experiment_three():
     labelEncoder = LabelEncoder()
     # Create preprocessing here!
     scaler = preprocessing.StandardScaler()
-    X, y = load_data('dataGraph.csv',labelEncoder)
+    X, y = load_data('dataGraph.csv')
     # fit scaler with X
     scaler.fit(X)
     # apply scaler to X
     X = scaler.transform(X)
     #labelEncode
     y = labelEncoder.fit_transform(y)
-    
+
     labels = labelEncoder.inverse_transform(np.arange(0, 8, 1))
     # Split into training and testing data
     train_x, val_x, train_y, val_y = train_test_split(X, y, test_size=0.2)
@@ -287,8 +287,8 @@ def experiment_three():
     loss = torch.nn.CrossEntropyLoss()
     optimizer = torch.optim.SGD(model.parameters(), lr=0.01, momentum=0.9)
     # Make 10 passes over the training data, each time using batch_size samples to compute gradient
-    num_epoch = 60
-    batch_size = 20 # batch size 25
+    num_epoch = 100
+    batch_size = 30 # batch size 25
     model.train()
 
     loss_list = []
