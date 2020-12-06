@@ -5,11 +5,13 @@ import librosa
 import sklearn.neural_network
 
 import torch
+from sklearn import preprocessing
 from torch.autograd import Variable
 from torch.nn import Linear, ReLU, CrossEntropyLoss, Sequential, Conv2d, MaxPool2d, Module, Softmax, BatchNorm2d, Dropout
 from torch.optim import Adam, SGD
 from pytorch_lightning.metrics import Accuracy, Precision, Recall, F1, MeanSquaredError, MeanSquaredLogError
-from pytorch_lightning.metrics.functional.classification import confusion_matrix, auroc, precision_recall_curve
+from pytorch_lightning.metrics.functional.classification import confusion_matrix, auroc, precision_recall_curve, \
+    stat_scores_multiple_classes
 from sklearn.preprocessing import LabelEncoder
 from sklearn.model_selection import train_test_split
 from torch.autograd import Variable
@@ -21,15 +23,15 @@ import pandas as pd
 import matplotlib.pyplot as plt
 
 
-def load_data(filename, labelEncoder):
+def load_data(filename):
     # Read our extracted data into a pandas dataframe
     dataframe = pd.read_csv(filename)
     # Next up we want to use sklearn preprocessing Label Encoder to turn our labels into numerics
     genres = dataframe.iloc[:, -1]
     # create our y dataset
-    y = labelEncoder.fit_transform(genres)
+    y = genres
     # Extract and preprocess our features from the dataframe
-    X = FeatureExtractor.PreprocessData(dataframe)
+    X = np.array(dataframe.iloc[:, :-1])
 
     return X, y
 
@@ -60,9 +62,28 @@ def plot_confusion_matrix(pred, target, label, title, outputFile):
     plt.show()
 
 
+def compute_precision(tp, fp):
+    # prediction = tp / (tp + fp)
+    return tp / (tp+fp)
+
+
+def compute_recall(tp,fn):
+    # recall = tp / (tp + fn)
+    return tp / (tp+fn)
+
+
 def output_analytics(predictions, target, label, filename):
     # Define the objects we will need
-    header = 'Accuracy Precision Recall f1_score means_squared_error'
+
+    header = 'Accuracy'
+    for i in range(8):
+        header += f' Precision_{label[i]}'
+
+    for i in range(8):
+        header += f' Recall_{label[i]}'
+
+    header += ' means_squared_error'
+
     header = header.split()
     file = open(f'{filename}.csv', 'w', newline='')
     with file:
@@ -83,19 +104,23 @@ def output_analytics(predictions, target, label, filename):
     plot_precision_recall_curve(predict, target, "Recall vs Precision", filename+"_RP_Graph.png")
 
     acc = Accuracy()
-    prec = Precision(num_classes=8)
-    rec = Recall(num_classes=8)
-    f1 = F1(num_classes=8)
     mse = MeanSquaredError()
-    msle = MeanSquaredLogError()
     accuracy = acc(predict, target)
-    precision = prec(predict, target)
-    recall = rec(predict, target)
-    f1_score = f1(predict, target)
+    tps, fps, tns, fns, sups = stat_scores_multiple_classes(predict, target, num_classes=8)
+    precision = compute_precision(tps,fps)
+    recall = compute_recall(tps, fns)
     means_squared_error = mse(predict, target)
 
     # save in a list and write to a csv file
-    list = f'{accuracy} {precision} {recall} {f1_score} {means_squared_error}'
+    list = f'{accuracy}'
+
+    for prec in precision:
+        list += f' {prec}'
+
+    for rec in recall:
+        list += f' {rec}'
+
+    list += f' {means_squared_error}'
     file = open(f'{filename}.csv', 'a', newline='')
     with file:
         writer = csv.writer(file)
@@ -197,18 +222,27 @@ def experiment_two(X, y, labels):
 def experiment_three():
     #Using CNN and spectrogram images directly for classification
     labelEncoder = LabelEncoder()
-    X, y = load_data('dataGraphFull.csv',labelEncoder)
+    # Create preprocessing here!
+    scaler = preprocessing.StandardScaler()
+    X, y = load_data('dataGraph.csv')
+    # fit scaler with X
+    scaler.fit(X)
+    # apply scaler to X
+    X = scaler.transform(X)
+    #labelEncode
+    y = labelEncoder.fit_transform(y)
+
     labels = labelEncoder.inverse_transform(np.arange(0, 8, 1))
     # Split into training and testing data
     train_x, val_x, train_y, val_y = train_test_split(X, y, test_size=0.2)
     del X
     del y
     # For the dataGraph there is a single channel'
-    TRACK_LENGTH = 15
+    TRACK_LENGTH = 10
     N = 128
 
     M = round(646/15 * TRACK_LENGTH)
-    REDUCTION_KERNEL_SIZE = round(42/646 * M)
+    REDUCTION_KERNEL_SIZE = round((42/646 * M)/3.5)
     train_x = train_x.reshape(train_x.shape[0], N, M)
     val_x = val_x.reshape(val_x.shape[0], N, M)
     train_x_torch = torch.from_numpy(train_x).float()
@@ -228,19 +262,24 @@ def experiment_three():
         torch.nn.ReLU(),
 
         torch.nn.MaxPool2d(kernel_size=(2, 4)),
-        torch.nn.Dropout2d(p=0.1),
-        torch.nn.ReLU(),
+        torch.nn.Dropout2d(p=0.2),
 
         torch.nn.Conv2d(in_channels=32, out_channels=64, kernel_size=(3, 3), stride=1, padding=1),
         torch.nn.ReLU(),
 
         torch.nn.MaxPool2d(kernel_size=(2, 4)),
+
+        torch.nn.Conv2d(in_channels=64, out_channels=128, kernel_size=(3, 3), stride=1, padding=1),
         torch.nn.ReLU(),
 
-        torch.nn.Conv2d(in_channels=64, out_channels=64, kernel_size=(34, REDUCTION_KERNEL_SIZE ), stride=1, padding=1),
+        torch.nn.MaxPool2d(kernel_size=(2, 4)),
+        torch.nn.Dropout2d(p=0.2),
+
+        torch.nn.Conv2d(in_channels=128, out_channels=256, kernel_size=(18, REDUCTION_KERNEL_SIZE), stride=1,padding=1),
         torch.nn.ReLU(),
 
-        torch.nn.Conv2d(in_channels=64, out_channels=8, kernel_size=(3, 3), stride=1, padding=1),
+        torch.nn.Conv2d(in_channels=256, out_channels=8, kernel_size=(3, 3), stride=1, padding=1),
+        torch.nn.ReLU(),
         torch.nn.Flatten(),
     )
 
@@ -248,12 +287,12 @@ def experiment_three():
     loss = torch.nn.CrossEntropyLoss()
     optimizer = torch.optim.SGD(model.parameters(), lr=0.01, momentum=0.9)
     # Make 10 passes over the training data, each time using batch_size samples to compute gradient
-    num_epoch = 20
-    batch_size = 80 # batch size 25
+    num_epoch = 100
+    batch_size = 30 # batch size 25
     model.train()
 
     loss_list = []
-    epoch_list = np.arange(1,21,1, dtype='int64')
+    epoch_list = np.arange(1,num_epoch+1,1, dtype='int64')
     for epoch in range(num_epoch):
         for i in range(0, len(train_x), batch_size):
             X = train_x_torch[i:i + batch_size]  # Slice out a mini-batch of features
@@ -271,12 +310,12 @@ def experiment_three():
     model.eval()
 
     plot_loss(epoch_list, loss_list, "CNN of Spectrogram Loss vs Epoch ("+f'{train_x.shape[0]} samples)','LossPltCNN.png')
-    output_analytics(model(test_x_torch), test_y_torch, labels, "CNN_Test_Analytics")
+    output_analytics(model(test_x_torch), test_y_torch, labels, "CNN_Test_Analytics")   # Testing Analytics
+    #output_analytics(model(train_x_torch), train_y_torch, labels, "CNN_Train_Analytics")    #Training Analytics
 
 
 def main():
   experiment_three()
-
 
 
 if __name__ == '__main__':
