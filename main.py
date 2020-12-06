@@ -9,7 +9,8 @@ from torch.autograd import Variable
 from torch.nn import Linear, ReLU, CrossEntropyLoss, Sequential, Conv2d, MaxPool2d, Module, Softmax, BatchNorm2d, Dropout
 from torch.optim import Adam, SGD
 from pytorch_lightning.metrics import Accuracy, Precision, Recall, F1, MeanSquaredError, MeanSquaredLogError
-from pytorch_lightning.metrics.functional.classification import confusion_matrix, auroc, precision_recall_curve
+from pytorch_lightning.metrics.functional.classification import confusion_matrix, auroc, precision_recall_curve, \
+    stat_scores_multiple_classes
 from sklearn.preprocessing import LabelEncoder
 from sklearn.model_selection import train_test_split
 from torch.autograd import Variable
@@ -60,9 +61,28 @@ def plot_confusion_matrix(pred, target, label, title, outputFile):
     plt.show()
 
 
+def compute_precision(tp, fp):
+    # prediction = tp / (tp + fp)
+    return tp / (tp+fp)
+
+
+def compute_recall(tp,fn):
+    # recall = tp / (tp + fn)
+    return tp / (tp+fn)
+
+
 def output_analytics(predictions, target, label, filename):
     # Define the objects we will need
-    header = 'Accuracy Precision Recall f1_score means_squared_error'
+
+    header = 'Accuracy'
+    for i in range(8):
+        header += f' Precision_{label[i]}'
+
+    for i in range(8):
+        header += f' Recall_{label[i]}'
+
+    header += ' means_squared_error'
+
     header = header.split()
     file = open(f'{filename}.csv', 'w', newline='')
     with file:
@@ -83,18 +103,23 @@ def output_analytics(predictions, target, label, filename):
     plot_precision_recall_curve(predict, target, "Recall vs Precision", filename+"_RP_Graph.png")
 
     acc = Accuracy()
-    prec = Precision(num_classes=8)
-    rec = Recall(num_classes=8)
-    f1 = F1(num_classes=8)
     mse = MeanSquaredError()
     accuracy = acc(predict, target)
-    precision = prec(predict, target)
-    recall = rec(predict, target)
-    f1_score = f1(predict, target)
+    tps, fps, tns, fns, sups = stat_scores_multiple_classes(predict, target, num_classes=8)
+    precision = compute_precision(tps,fps)
+    recall = compute_recall(tps, fns)
     means_squared_error = mse(predict, target)
 
     # save in a list and write to a csv file
-    list = f'{accuracy} {precision} {recall} {f1_score} {means_squared_error}'
+    list = f'{accuracy}'
+
+    for prec in precision:
+        list += f' {prec}'
+
+    for rec in recall:
+        list += f' {rec}'
+
+    list += f' {means_squared_error}'
     file = open(f'{filename}.csv', 'a', newline='')
     with file:
         writer = csv.writer(file)
@@ -252,12 +277,12 @@ def experiment_three():
     loss = torch.nn.CrossEntropyLoss()
     optimizer = torch.optim.SGD(model.parameters(), lr=0.01, momentum=0.9)
     # Make 10 passes over the training data, each time using batch_size samples to compute gradient
-    num_epoch = 40
+    num_epoch = 50
     batch_size = 80 # batch size 25
     model.train()
 
     loss_list = []
-    epoch_list = np.arange(1,41,1, dtype='int64')
+    epoch_list = np.arange(1,num_epoch+1,1, dtype='int64')
     for epoch in range(num_epoch):
         for i in range(0, len(train_x), batch_size):
             X = train_x_torch[i:i + batch_size]  # Slice out a mini-batch of features
@@ -281,7 +306,6 @@ def experiment_three():
 
 def main():
   experiment_three()
-
 
 
 if __name__ == '__main__':
