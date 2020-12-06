@@ -152,7 +152,7 @@ def ExperimentTwo(X, y):
 
 def ExperimentThree():
     # Using CNN and spectrogram images directly for classification
-    X, y = LoadData('dataGraphf.csv')
+    X, y = LoadData('dataGraph.csv')
     print("#########\tExperiment Three: Convolutional Neural Network Classifier\t#########")
     # Split into training and testing data
     train_x, val_x, train_y, val_y = train_test_split(X, y, test_size=0.2)
@@ -203,8 +203,8 @@ def ExperimentThree():
     loss = torch.nn.CrossEntropyLoss()
     optimizer = torch.optim.SGD(model.parameters(), lr=0.01, momentum=0.9)
     # Make 10 passes over the training data, each time using batch_size samples to compute gradient
-    num_epoch = 1000
-    batch_size = 80  # batch size 25
+    num_epoch = 20
+    batch_size = 100  # batch size 25
     model.train()
     for epoch in range(num_epoch):
         for i in range(0, len(train_x), batch_size):
