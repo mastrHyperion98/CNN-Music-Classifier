@@ -5,6 +5,7 @@ import librosa
 import sklearn.neural_network
 
 import torch
+from sklearn import preprocessing
 from torch.autograd import Variable
 from torch.nn import Linear, ReLU, CrossEntropyLoss, Sequential, Conv2d, MaxPool2d, Module, Softmax, BatchNorm2d, Dropout
 from torch.optim import Adam, SGD
@@ -30,7 +31,7 @@ def load_data(filename, labelEncoder):
     # create our y dataset
     y = labelEncoder.fit_transform(genres)
     # Extract and preprocess our features from the dataframe
-    X = FeatureExtractor.PreprocessData(dataframe)
+    X = np.array(dataframe.iloc[:, :-1])
 
     return X, y
 
@@ -221,14 +222,20 @@ def experiment_two(X, y, labels):
 def experiment_three():
     #Using CNN and spectrogram images directly for classification
     labelEncoder = LabelEncoder()
-    X, y = load_data('dataGraphFull.csv',labelEncoder)
+    # Create preprocessing here!
+    scaler = preprocessing.StandardScaler()
+    X, y = load_data('dataGraph.csv',labelEncoder)
+    # fit scaler with X
+    scaler.fit(X)
+    # apply scaler to X
+    X = scaler.transform(X)
     labels = labelEncoder.inverse_transform(np.arange(0, 8, 1))
     # Split into training and testing data
     train_x, val_x, train_y, val_y = train_test_split(X, y, test_size=0.2)
     del X
     del y
     # For the dataGraph there is a single channel'
-    TRACK_LENGTH = 15
+    TRACK_LENGTH = 10
     N = 128
 
     M = round(646/15 * TRACK_LENGTH)
@@ -277,8 +284,8 @@ def experiment_three():
     loss = torch.nn.CrossEntropyLoss()
     optimizer = torch.optim.SGD(model.parameters(), lr=0.01, momentum=0.9)
     # Make 10 passes over the training data, each time using batch_size samples to compute gradient
-    num_epoch = 50
-    batch_size = 80 # batch size 25
+    num_epoch = 30
+    batch_size = 20 # batch size 25
     model.train()
 
     loss_list = []
