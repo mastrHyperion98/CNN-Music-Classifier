@@ -100,7 +100,7 @@ def output_analytics(predictions, target, label, filename):
     predict = torch.from_numpy(np.array(predict))
 
     plot_confusion_matrix(predict, target, label,
-                          "CNN Confusion Matrix (" + f'{predict.shape[0]} test samples)', filename+'_confusionMatrix.png')
+                          f'{filename} Confusion Matrix (' + f'{predict.shape[0]} test samples)', filename+'_confusionMatrix.png')
     plot_precision_recall_curve(predict, target, "Recall vs Precision", filename+"_RP_Graph.png")
 
     acc = Accuracy()
@@ -138,14 +138,12 @@ def plot_precision_recall_curve(pred, target, title, outputFile):
     plt.show()
 
 
-def experiment_one(X, y, labels):
+def experiment_one(train_x, val_x, train_y, val_y, labels):
     #Experiment One and two uses our extrapolated features to try and create a fast and efficient trainer.
     #Here we will be using a RandomForestClassifier of max_depth 20 and 200 estimators to estimate our resuts.
     print("#########\tExperiment One: RandomForest Classifier\t#########")
     max_depth = 26
     n_estimators = 100
-    # load our data
-    train_x, val_x, train_y, val_y=  train_test_split(X,y, test_size=0.1)
     # Create a RandomForestClassifier
     clf = RandomForestClassifier(max_depth=max_depth, bootstrap=True, n_estimators=n_estimators, random_state=0)
     # Fit the data
@@ -157,25 +155,26 @@ def experiment_one(X, y, labels):
 
     # Plot non-normalized confusion matrix
     titles_options = [("Confusion matrix, without normalization", None),
-                      ("Normalized confusion matrix", 'true')]
+                      ("RandomForest Normalized Confusion Matrix", 'true')]
+    plt.rcParams["figure.figsize"] = (10, 10)
     for title, normalize in titles_options:
-        disp = plot_confusion_matrix(clf, val_x, val_y,
+        disp = sklearn.metrics.plot_confusion_matrix(clf, val_x, val_y,
                                      cmap=plt.cm.Blues,
                                      normalize=normalize)
         disp.ax_.set_title(title)
 
-        print(title)
-        print(disp.confusion_matrix)
+    plt.xticks(np.arange(0,8,1), labels=labels, rotation=90)
+    plt.yticks(np.arange(0,8,1), labels=labels)
+
     plt.savefig('DecisionTree_ConfusionMatrix.png')
     plt.show()
 
 
-def experiment_two(X, y, labels):
+def experiment_two(train_x, val_x, train_y, val_y, labels):
     #Experiment two is very similar to Experiment One but using a Neural Network instead
     print("#########\tExperiment Two: Neural Network Classifier\t#########")
     # Your code here. Aim for 2-4 lines.
     #X, y = LoadData('data.csv')
-    train_x, val_x, train_y, val_y = train_test_split(X, y, test_size=0.1, shuffle=True)
     X_train_torch = torch.from_numpy(train_x).float()
     y_train_torch = torch.from_numpy(train_y).long()
     X_test_torch = torch.from_numpy(val_x).float()
@@ -196,8 +195,8 @@ def experiment_two(X, y, labels):
     loss = torch.nn.CrossEntropyLoss()
     optimizer = torch.optim.SGD(model.parameters(), lr=0.01, momentum=0.9)
     # Make 10 passes over the training data, each time using batch_size samples to compute gradient
-    num_epoch = 1000
-    batch_size = 200
+    num_epoch = 500
+    batch_size = 80
     model.train()
     for epoch in range(num_epoch):
         for i in range(0, len(train_x), batch_size):
@@ -224,21 +223,21 @@ def experiment_three():
     labelEncoder = LabelEncoder()
     # Create preprocessing here!
     scaler = preprocessing.StandardScaler()
-    X, y = load_data('dataGraph.csv')
-    # fit scaler with X
-    scaler.fit(X)
-    # apply scaler to X
-    X = scaler.transform(X)
+    X, y = load_data('dataGraphFull.csv')
     #labelEncode
-    y = labelEncoder.fit_transform(y)
+    y = labelEncoder.fit_transform(y) # Only encoding fine to do here
 
     labels = labelEncoder.inverse_transform(np.arange(0, 8, 1))
     # Split into training and testing data
-    train_x, val_x, train_y, val_y = train_test_split(X, y, test_size=0.2)
+    train_x, val_x, train_y, val_y = train_test_split(X, y, test_size=0.2, random_state=0)
+    # Fit and transform our X input
+    scaler.fit(train_x)
+    train_x = scaler.transform(train_x)
+    val_x = scaler.transform(val_x)
     del X
     del y
     # For the dataGraph there is a single channel'
-    TRACK_LENGTH = 10
+    TRACK_LENGTH = 15
     N = 128
 
     M = round(646/15 * TRACK_LENGTH)
@@ -287,8 +286,8 @@ def experiment_three():
     loss = torch.nn.CrossEntropyLoss()
     optimizer = torch.optim.SGD(model.parameters(), lr=0.01, momentum=0.9)
     # Make 10 passes over the training data, each time using batch_size samples to compute gradient
-    num_epoch = 100
-    batch_size = 30 # batch size 25
+    num_epoch = 60
+    batch_size = 80 # batch size 25
     model.train()
 
     loss_list = []
@@ -310,12 +309,28 @@ def experiment_three():
     model.eval()
 
     plot_loss(epoch_list, loss_list, "CNN of Spectrogram Loss vs Epoch ("+f'{train_x.shape[0]} samples)','LossPltCNN.png')
-    output_analytics(model(test_x_torch), test_y_torch, labels, "CNN_Test_Analytics")   # Testing Analytics
+    output_analytics(model(test_x_torch), test_y_torch, labels, "CNN_Test_Analytics_3")   # Testing Analytics
     #output_analytics(model(train_x_torch), train_y_torch, labels, "CNN_Train_Analytics")    #Training Analytics
 
 
 def main():
-  experiment_three()
+    # Using CNN and spectrogram images directly for classification
+    labelEncoder = LabelEncoder()
+    # Create preprocessing here!
+    scaler = preprocessing.StandardScaler()
+    X, y = load_data('data.csv')
+    # labelEncode
+    y = labelEncoder.fit_transform(y)  # Only encoding fine to do here
+
+    labels = labelEncoder.inverse_transform(np.arange(0, 8, 1))
+    # Split into training and testing data
+    train_x, val_x, train_y, val_y = train_test_split(X, y, test_size=0.2, random_state=0)
+    # Fit and transform our X input
+    scaler.fit(train_x)
+    train_x = scaler.transform(train_x)
+    val_x = scaler.transform(val_x)
+    experiment_one(train_x, val_x, train_y, val_y, labels)
+    experiment_two(train_x, val_x, train_y, val_y, labels)
 
 
 if __name__ == '__main__':
