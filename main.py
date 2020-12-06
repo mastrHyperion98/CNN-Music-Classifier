@@ -23,13 +23,13 @@ import pandas as pd
 import matplotlib.pyplot as plt
 
 
-def load_data(filename, labelEncoder):
+def load_data(filename):
     # Read our extracted data into a pandas dataframe
     dataframe = pd.read_csv(filename)
     # Next up we want to use sklearn preprocessing Label Encoder to turn our labels into numerics
     genres = dataframe.iloc[:, -1]
     # create our y dataset
-    y = labelEncoder.fit_transform(genres)
+    y = genres
     # Extract and preprocess our features from the dataframe
     X = np.array(dataframe.iloc[:, :-1])
 
@@ -229,6 +229,9 @@ def experiment_three():
     scaler.fit(X)
     # apply scaler to X
     X = scaler.transform(X)
+    #labelEncode
+    y = labelEncoder.fit_transform(y)
+    
     labels = labelEncoder.inverse_transform(np.arange(0, 8, 1))
     # Split into training and testing data
     train_x, val_x, train_y, val_y = train_test_split(X, y, test_size=0.2)
@@ -284,7 +287,7 @@ def experiment_three():
     loss = torch.nn.CrossEntropyLoss()
     optimizer = torch.optim.SGD(model.parameters(), lr=0.01, momentum=0.9)
     # Make 10 passes over the training data, each time using batch_size samples to compute gradient
-    num_epoch = 30
+    num_epoch = 60
     batch_size = 20 # batch size 25
     model.train()
 
