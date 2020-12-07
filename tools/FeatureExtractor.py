@@ -2,9 +2,9 @@ import librosa
 import matplotlib.pyplot as plt
 import librosa.display
 import numpy as np
-from sklearn import preprocessing
 
 def visualize_waveform(x, sr):
+    """Visualize the waveform"""
     plt.figure(figsize=(14, 5))
     librosa.display.waveplot(x, sr=sr)
     plt.title("Waveform")
@@ -12,6 +12,7 @@ def visualize_waveform(x, sr):
 
 
 def visualize_spectrogram(x, sr):
+    """visualize the spectrogram of the passed in track data"""
     plt.figure(figsize=(14, 5))
     librosa.display.specshow(x, sr=sr, x_axis='time', y_axis='hz')
     plt.colorbar()
@@ -20,6 +21,7 @@ def visualize_spectrogram(x, sr):
 
 
 def extract(x,sr, genre):
+    """Return a list of all the features in the track"""
     zero_crossings = np.mean(librosa.zero_crossings(x, pad=False))
     chroma_stft = np.mean(librosa.feature.chroma_stft(x, sr=sr))
     spec_cent = np.mean(librosa.feature.spectral_centroid(x, sr=sr))
