@@ -40,7 +40,7 @@ def fetch_data_features(output, duration):
             for feature in features:
                 to_append += f' {feature}'
 
-            file = open(output, 'a', newline='')
+            file = open(f'{output}.csv', 'a', newline='')
             with file:
                 writer = csv.writer(file)
                 writer.writerow(to_append.split())
