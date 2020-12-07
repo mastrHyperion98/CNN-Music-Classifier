@@ -66,3 +66,23 @@ our report. However, please keep in mind that the best data presented in the rep
 in the sample. 
 
 IT IS HIGHLY DISCOURAGED TO TRY AND RUN BIGGER DATASETS. NOT MEETING THE HARDWARE REQUIREMENTS WILL CAUSE SYSTEMS TO CRASH, HANG AND BECOME UNRESPONSIVE! 
+
+
+##### LIBRARY REQUIREMENTS
+
+* numpy==1.18.0
+* pandas==1.1.4
+* SciPy==1.4.1
+* joblib
+* threadpoolctl==2.0.0
+* scikit-learn==0.23.2
+* librosa==0.8.0
+* matplotlib==3.3.2
+* torch==1.7.0
+* pytorch_lightning
+
+GPU is not required to run the provided data sets
+RECOMMEND: 16 GB of Memory MINIMUM --> Will need to comment out training analytics ouput for Experiment 3 when using spectrogram_800_15sec.csv as data for the CNN_Test_Analytics
+
+Depending on the dataset and system hardware training can take anywhere from 10min to an hour. 
+Jupyter Notebook not used as it is a nightmare for cooperative/simultaneous work
