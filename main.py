@@ -1,21 +1,12 @@
 import csv
-import math
-
-import librosa
 import sklearn.neural_network
-
 import torch
 from sklearn import preprocessing
-from torch.autograd import Variable
-from torch.nn import Linear, ReLU, CrossEntropyLoss, Sequential, Conv2d, MaxPool2d, Module, Softmax, BatchNorm2d, Dropout
-from torch.optim import Adam, SGD
-from pytorch_lightning.metrics import Accuracy, Precision, Recall, F1, MeanSquaredError, MeanSquaredLogError
+from pytorch_lightning.metrics import Accuracy,  MeanSquaredError
 from pytorch_lightning.metrics.functional.classification import confusion_matrix, auroc, precision_recall_curve, \
     stat_scores_multiple_classes
 from sklearn.preprocessing import LabelEncoder
 from sklearn.model_selection import train_test_split
-from torch.autograd import Variable
-from tools import FeatureExtractor
 from sklearn.ensemble import RandomForestClassifier
 from sklearn.metrics import plot_confusion_matrix
 import numpy as np
@@ -24,6 +15,7 @@ import matplotlib.pyplot as plt
 
 
 def load_data(filename):
+    """Loads the into the dataframe the data stored in the provided csv"""
     # Read our extracted data into a pandas dataframe
     dataframe = pd.read_csv(filename)
     # Next up we want to use sklearn preprocessing Label Encoder to turn our labels into numerics
@@ -38,6 +30,7 @@ def load_data(filename):
 
 # Plot the epoch vs loss
 def plot_loss(X, y, title, outputFile):
+    """Plot the loss vs Epoch graph and output it to the desired filename"""
     # We will print stuff here
     plt.plot(X, y)
     plt.title(title)
@@ -49,6 +42,7 @@ def plot_loss(X, y, title, outputFile):
 
 # Function to get and plot the confusion matrix
 def plot_confusion_matrix(pred, target, label, title, outputFile):
+    """Plot the confusion matrix for the given network. Expects pred and target to be pytorch tensors"""
     matrix = confusion_matrix(pred, target, normalize=True)
     plt.figure(figsize=(150,150))
     im = plt.matshow(matrix, cmap='gist_gray')
@@ -63,17 +57,17 @@ def plot_confusion_matrix(pred, target, label, title, outputFile):
 
 
 def compute_precision(tp, fp):
-    # prediction = tp / (tp + fp)
+    """Compute precision values using pytorch Tensor addition and division"""
     return tp / (tp+fp)
 
 
 def compute_recall(tp,fn):
-    # recall = tp / (tp + fn)
+    """Compute Recall values using pytorch Tensor addition and division"""
     return tp / (tp+fn)
 
 
 def output_analytics(predictions, target, label, filename):
-    # Define the objects we will need
+    """Outputs and saves in csv and appropriate plots the analytic data. Includes Recall, Precision, Accuracy and more"""
 
     header = 'Accuracy'
     for i in range(8):
@@ -129,6 +123,7 @@ def output_analytics(predictions, target, label, filename):
 
 
 def plot_precision_recall_curve(pred, target, title, outputFile):
+    """Shows and outputs the precision/recall curve"""
     precision, recall, thresholds = precision_recall_curve(pred, target)
     plt.plot(recall,precision)
     plt.title(title)
@@ -139,8 +134,7 @@ def plot_precision_recall_curve(pred, target, title, outputFile):
 
 
 def experiment_one(train_x, val_x, train_y, val_y, labels):
-    #Experiment One and two uses our extrapolated features to try and create a fast and efficient trainer.
-    #Here we will be using a RandomForestClassifier of max_depth 20 and 200 estimators to estimate our resuts.
+    """Runs a RandomForest on the train and testing data provide"""
     print("#########\tExperiment One: RandomForest Classifier\t#########")
     max_depth = 26
     n_estimators = 100
@@ -171,7 +165,7 @@ def experiment_one(train_x, val_x, train_y, val_y, labels):
 
 
 def experiment_two(train_x, val_x, train_y, val_y, labels):
-    #Experiment two is very similar to Experiment One but using a Neural Network instead
+    """Runs a very primitive feedforward neural network and the provided training and testing data"""
     print("#########\tExperiment Two: Neural Network Classifier\t#########")
     # Your code here. Aim for 2-4 lines.
     #X, y = LoadData('data.csv')
@@ -214,19 +208,22 @@ def experiment_two(train_x, val_x, train_y, val_y, labels):
 
     # Set model in evaluation mode
     model.eval()
+    # Get analyics report
     output_analytics(model(X_train_torch), y_train_torch, labels, 'FNN_Train_Analytics')
     output_analytics(model(X_test_torch), y_test_torch, labels, 'FNN_Test_Analytics')
 
 
-def experiment_three():
-    #Using CNN and spectrogram images directly for classification
+def experiment_three(filename, duration):
+    """Our CNN implementation. Since it does not re-use the same data as experiment one and two it will load its own"""
+    # Create our label encoder
     labelEncoder = LabelEncoder()
     # Create preprocessing here!
     scaler = preprocessing.StandardScaler()
-    X, y = load_data('dataGraphFull.csv')
-    #labelEncode
+    # Load our data
+    X, y = load_data(f'{filename}.csv')
+    # Fit and encode our labels
     y = labelEncoder.fit_transform(y) # Only encoding fine to do here
-
+    # Create our reverse "string" labels
     labels = labelEncoder.inverse_transform(np.arange(0, 8, 1))
     # Split into training and testing data
     train_x, val_x, train_y, val_y = train_test_split(X, y, test_size=0.2, random_state=0)
@@ -234,10 +231,11 @@ def experiment_three():
     scaler.fit(train_x)
     train_x = scaler.transform(train_x)
     val_x = scaler.transform(val_x)
+    # Delete X and y in an attempt to free up memory space for the CNN operations and analytics
     del X
     del y
     # For the dataGraph there is a single channel'
-    TRACK_LENGTH = 15
+    TRACK_LENGTH = duration
     N = 128
 
     M = round(646/15 * TRACK_LENGTH)
@@ -309,11 +307,13 @@ def experiment_three():
     model.eval()
 
     plot_loss(epoch_list, loss_list, "CNN of Spectrogram Loss vs Epoch ("+f'{train_x.shape[0]} samples)','LossPltCNN.png')
-    output_analytics(model(test_x_torch), test_y_torch, labels, "CNN_Test_Analytics_3")   # Testing Analytics
-    #output_analytics(model(train_x_torch), train_y_torch, labels, "CNN_Train_Analytics")    #Training Analytics
+    output_analytics(model(test_x_torch), test_y_torch, labels, "CNN_Test_Analytics")   # Testing Analytics
+    # COMMENT OUT IF SYSTEM RUNS OUT OF MEMORY!!
+    output_analytics(model(train_x_torch), train_y_torch, labels, "CNN_Train_Analytics")    #Training Analytics
 
 
 def main():
+    """main function running the experiemnts"""
     # Using CNN and spectrogram images directly for classification
     labelEncoder = LabelEncoder()
     # Create preprocessing here!

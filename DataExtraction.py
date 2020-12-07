@@ -40,7 +40,7 @@ def fetch_data_features(output, duration):
             for feature in features:
                 to_append += f' {feature}'
 
-            file = open(f'{output}.csv', 'w', newline='')
+            file = open(output, 'a', newline='')
             with file:
                 writer = csv.writer(file)
                 writer.writerow(to_append.split())
@@ -80,13 +80,14 @@ def fetch_graph_data(output, duration):
                     x, sr = librosa.load(audio_path, mono=True, duration=duration, offset=offset_int)
                     mels_spectrogram = librosa.feature.melspectrogram(x, sr, n_mels=128)
                     Xdb = librosa.power_to_db(mels_spectrogram, ref=np.max)
+                    # reshape so that it fits on one row in the  csv
                     features = np.reshape(Xdb, (numCols*numRows,))
                     to_append = ''
                     for feature in features:
                         to_append += f' {feature}'
 
                     to_append += f' {genre}'
-                    file = open(f'{output}.csv', 'w', newline='')
+                    file = open(f'{output}.csv', 'a', newline='')
                     with file:
                         writer = csv.writer(file)
                         writer.writerow(to_append.split())
