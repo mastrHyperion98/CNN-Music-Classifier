@@ -150,7 +150,7 @@ def experiment_one(train_x, val_x, train_y, val_y, labels):
     # Plot non-normalized confusion matrix
     titles_options = [("Confusion matrix, without normalization", None),
                       ("RandomForest Normalized Confusion Matrix", 'true')]
-    plt.rcParams["figure.figsize"] = (10, 10)
+
     for title, normalize in titles_options:
         disp = sklearn.metrics.plot_confusion_matrix(clf, val_x, val_y,
                                      cmap=plt.cm.Blues,
@@ -284,8 +284,10 @@ def experiment_three(filename, duration):
     loss = torch.nn.CrossEntropyLoss()
     optimizer = torch.optim.SGD(model.parameters(), lr=0.01, momentum=0.9)
     # Make 10 passes over the training data, each time using batch_size samples to compute gradient
-    num_epoch = 60
-    batch_size = 80 # batch size 25
+    num_epoch = 60 # default value we will be used for our larger dataset. May cause overfitting on the 160 set provided
+    batch_size = 80
+    if train_x.shape[0] < 160:
+        batch_size = 30
     model.train()
 
     loss_list = []
@@ -314,11 +316,13 @@ def experiment_three(filename, duration):
 
 def main():
     """main function running the experiemnts"""
+    # Figure sizes
+    plt.rcParams["figure.figsize"] = (10, 10)
     # Using CNN and spectrogram images directly for classification
     labelEncoder = LabelEncoder()
     # Create preprocessing here!
     scaler = preprocessing.StandardScaler()
-    X, y = load_data('data.csv')
+    X, y = load_data('data_800_10sec.csv')
     # labelEncode
     y = labelEncoder.fit_transform(y)  # Only encoding fine to do here
 
@@ -331,7 +335,7 @@ def main():
     val_x = scaler.transform(val_x)
     experiment_one(train_x, val_x, train_y, val_y, labels)
     experiment_two(train_x, val_x, train_y, val_y, labels)
-
+    experiment_three('data_spectrogram_160_10sec', 10)
 
 if __name__ == '__main__':
     main()
