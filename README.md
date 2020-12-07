@@ -59,7 +59,7 @@ All the paths (dataset) folder will be included. You can manually create a folde
 * main.py will execute three different experiments using our smallest datasets. The smallest dataset are the ones that execute most quickly and require less system resources. Even our 
 800 spectrogram images sample takes about 30min to train on an 8 core Ryzen 7 processor and requires more than 14 GB of system memory. We are working with a lot of data. Our 
 4k datasets are omitted as the version required to run on the CNN takes several hours to run and over 40GB of system memory. 
-* data_spectrogram_160_10sec.csv is the default file for the CNN and data.csv is the default file for the FFNN and random forest. These can be changed but it is not recommened. 
+* data_spectrogram_160_10sec.csv is the default file for the CNN and data_800_10sec.csv is the default file for the FFNN and random forest. These can be changed but it is not recommened. 
 * Running main.py as is without any modifications will create a large amount of graphs and csv output files contain various analytical outputs. Those can be compared with what we have in 
 our report. However, please keep in mind that the best data presented in the report were generated using the 4000 track dataset. Those were trained overnight!!!! 
 * I will also rename the CNN_Test_Analytics.csv file that experiment three generates to add SAMPLE at the beginning. Random_sample = 0 is enabled and as such your run should match our data
