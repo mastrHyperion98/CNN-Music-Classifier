@@ -86,3 +86,7 @@ RECOMMEND: 16 GB of Memory MINIMUM --> Will need to comment out training analyti
 
 Depending on the dataset and system hardware training can take anywhere from 10min to an hour. 
 Jupyter Notebook not used as it is a nightmare for cooperative/simultaneous work
+
+
+spectrogram_800_15sec google drive link: https://drive.google.com/file/d/1FFShzGx2bJitrsTCp_5tECbKlsgqJnIN/view?usp=sharing 
+warning ~1.5Gb download
