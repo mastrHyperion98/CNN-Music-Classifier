@@ -4,14 +4,14 @@ import librosa.display
 import numpy as np
 from sklearn import preprocessing
 
-def VisualizeWaveForm(x, sr):
+def visualize_waveform(x, sr):
     plt.figure(figsize=(14, 5))
     librosa.display.waveplot(x, sr=sr)
     plt.title("Waveform")
     plt.show()
 
 
-def VisualizeSpectrogram(x, sr):
+def visualize_spectrogram(x, sr):
     plt.figure(figsize=(14, 5))
     librosa.display.specshow(x, sr=sr, x_axis='time', y_axis='hz')
     plt.colorbar()
@@ -19,7 +19,7 @@ def VisualizeSpectrogram(x, sr):
     plt.show()
 
 
-def Extract(x,sr, genre):
+def extract(x,sr, genre):
     zero_crossings = np.mean(librosa.zero_crossings(x, pad=False))
     chroma_stft = np.mean(librosa.feature.chroma_stft(x, sr=sr))
     spec_cent = np.mean(librosa.feature.spectral_centroid(x, sr=sr))
@@ -34,19 +34,3 @@ def Extract(x,sr, genre):
 
     features.append(genre)
     return features
-
-
-# accepts a dataframe and applies column wise scaling
-def PreprocessData(data):
-   scaler = preprocessing.StandardScaler()
-   return scaler.fit_transform(np.array(data.iloc[:, :-1]))
-
-
-
-def TransformTarget(targets, N, M):
-    transformedTarget = []
-    for i in range(targets.shape[0]):
-        classification = targets[i]
-        transformedTarget.append(classification * np.ones(shape=(N,M)))
-
-    return np.array(transformedTarget)
